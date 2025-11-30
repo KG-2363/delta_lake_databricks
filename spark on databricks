@@ -1,25 +1,38 @@
-Driver  -
+# Partitions 
+  Data divided into mutually exclusively in memory partitions 
+  Size and number of Partitions affect parallelism
+  Each partition processed independently 
+  no of partitions = no of tasks 
+  impacts performance and shuffle partitions
+  
+  
+
+# Driver  -
   creates Spark session
+  sends request to cluter manager for resources
   co ordinates tasks, handle failures
   
-Executors - run on worker nodes in a spark cluster and host tasks( for I/O and data processing)
+# Executors - run on worker nodes in a spark cluster and host tasks( for I/O and data processing)
    available CPU cores, memory resources, config settings
    Interact with driver for task coordination and data transfer
    store intermediate ad final results in memory or disk.
  
-Stages are group of tasks that can be executed in parallel.
+# Stages are group of tasks that can be executed in parallel.
 
-Shared Nothing Mode -  Tasks within a stage run in parallel known as shared nothing mode
+# Principles of Distributed Computing -
+Shared Nothing Architecture  -  Independence, Fault Tolerance, Scalability, Resource Partitioning
+  Each node works independently and manages its own resources
+  Tasks within a stage run in parallel known as shared nothing mode
 
-Clusters in Databricks Platform -
+# Clusters in Databricks Platform -
   All Purpose Clusters - interactive clusters that support notebooks, jobs, dashboards etc. with configurable auto termination.
   Job Clusters - ephemeral clusters that starts when a job runs and terminate automatically upon job completion.
   SQL Warehouses - Optimised clusters for sql query optimization with instant start up and auto scaling to balance cost and performance.
 
-Spark UI 
-Application UI - per application (Spark Session)
+# Spark UI 
+ Application UI - per application (Spark Session)
   app progress, task execution, dag visualisation, stage details
-Master UI - per cluster worker node status, health and cluster wide resources allocation
+ Master UI - per cluster worker node status, health and cluster wide resources allocation
 
 
 
