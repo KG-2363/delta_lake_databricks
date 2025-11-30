@@ -1,0 +1,40 @@
+Driver  -
+  creates Spark session
+  co ordinates tasks, handle failures
+  
+Executors - run on worker nodes in a spark cluster and host tasks( for I/O and data processing)
+   available CPU cores, memory resources, config settings
+   Interact with driver for task coordination and data transfer
+   store intermediate ad final results in memory or disk.
+ 
+Stages are group of tasks that can be executed in parallel.
+
+Shared Nothing Mode -  Tasks within a stage run in parallel known as shared nothing mode
+
+Clusters in Databricks Platform -
+  All Purpose Clusters - interactive clusters that support notebooks, jobs, dashboards etc. with configurable auto termination.
+  Job Clusters - ephemeral clusters that starts when a job runs and terminate automatically upon job completion.
+  SQL Warehouses - Optimised clusters for sql query optimization with instant start up and auto scaling to balance cost and performance.
+
+Spark UI 
+Application UI - per application (Spark Session)
+  app progress, task execution, dag visualisation, stage details
+Master UI - per cluster worker node status, health and cluster wide resources allocation
+
+
+
+
+
+Display 
+  shows data in tabular format
+  limit upto 10000 records or upto 2 MB 
+
+Infer Schema vs Schema 
+ when we use infer schema while creating a df,
+  it initiates spark jobs 
+  - forcing spark to infer schema 
+ while when we provide a custom schema, it's just like a transformation. 
+- did not invoke a spark job, 
+  strongly typed datatypes, 
+  used in production applications
+
