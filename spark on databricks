@@ -1,3 +1,21 @@
+
+# Display 
+  shows data in tabular format
+  limit upto 10000 records or upto 2 MB 
+
+
+# Infer Schema vs Schema Enforcement
+
+ when we use infer schema while creating a df,
+  it initiates spark jobs 
+  - forcing spark to infer schema 
+ while when we provide a custom schema, it's just like a transformation. 
+- did not invoke a spark job, 
+  strongly typed datatypes, 
+  used in production applications
+
+
+
 # Partitions 
   Data divided into mutually exclusively in memory partitions 
   Size and number of Partitions affect parallelism
@@ -6,16 +24,19 @@
   impacts performance and shuffle partitions
 
 
+
 # Driver  -
   creates Spark session
   sends request to cluter manager for resources
   co ordinates tasks, handle failures
+
 
   
 # Executors - run on worker nodes in a spark cluster and host tasks( for I/O and data processing)
    available CPU cores, memory resources, config settings
    Interact with driver for task coordination and data transfer
    store intermediate ad final results in memory or disk.
+
 
  
 # Stages are group of tasks that can be executed in parallel.
@@ -27,16 +48,19 @@ Shared Nothing Architecture  -  Independence, Fault Tolerance, Scalability, Reso
   Tasks within a stage run in parallel known as shared nothing mode
 
 
+
 # Clusters in Databricks Platform -
   All Purpose Clusters - interactive clusters that support notebooks, jobs, dashboards etc. with configurable auto termination.
   Job Clusters - ephemeral clusters that starts when a job runs and terminate automatically upon job completion.
   SQL Warehouses - Optimised clusters for sql query optimization with instant start up and auto scaling to balance cost and performance.
 
 
+
 # Spark UI 
  Application UI - per application (Spark Session)
   app progress, task execution, dag visualisation, stage details
  Master UI - per cluster worker node status, health and cluster wide resources allocation
+
 
 
 # Shuffling -
@@ -54,6 +78,32 @@ co located data
 avoid unnecessary shuffles
 effective partitioning strategies 
 
+# SparkSession table VS DataFrame Reader Method --
+
+spark.table(name: str)
+----------------------
+Where: Method on SparkSession.
+What it loads: Tables and views (including temporary/global temp views) registered in the session/catalog.
+Options support: No—you can’t add .option(...) or .schema(...) because it directly materializes the table/view.
+
+
+df = spark.table("sales.daily_orders")
+df = spark.table("my_temp_view")          # works for session temp views
+df = spark.table("global_temp.some_view") # global temp views
+
+spark.read.table(name: str)
+---------------------------
+
+
+Where: Method on DataFrameReader (spark.read).
+What it loads: Tables registered in the catalog; in practice, this also works for views, but it’s primarily designed for data-source-backed tables.
+Options support: Yes—you can chain reader options before .table(...). Whether they’re honored depends on the underlying data source (e.g., Delta, Parquet).
+
+
+df = spark.read.option("timeZone", "UTC").table("sales.daily_orders")
+df = spark.read.table("sales.daily_orders")  # plain read
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 # Map Shuffle Reduce Model
 Each transformation goes through this simple model.
@@ -78,10 +128,26 @@ col("age").isNotNull() -- CHECK FOR NULLS
 col("title").contains("Manager") -- STRING MATCHING
 df.sort(col("c1").desc(),col("c2").asc())
 
+----------------------------------------------------------
+ # sum(when(col("Year").isNull(),1).otherwise(0)).alias("Null_Year_count") -- Explain
 
-# FLIGHTS DATA INGESTION ---------------------------------------------------------
+col("Year").isNull()
+Checks each row: True if Year is NULL, otherwise False.
 
-flights_df = spark.read.table("dbacademy_airlines.vo1.flights_small")
+when(..., 1).otherwise(0)
+Converts that boolean to an integer flag:
+
+1 for rows where Year is NULL
+0 for rows where Year is not NULL
+
+sum(...)
+Adds up those 1s and 0s across the group (or the entire DataFrame if not grouped), resulting in the count of NULL
+
+
+# FLIGHTS DATA INGESTION 
+=========================================================================================================================================
+
+flights_df = spark.table("dbacademy_airlines.vo1.flights_small")
 
 flights_df.printSchema()
 
@@ -102,7 +168,8 @@ flights_count = flights_req_cols_df.count()
 print(f"Source data has {flights_count} records")
 
 # Temp View 
-available in SQL Namespace 
+-- available in SQL Namespace 
+
 flights_req_cols_df\
 .selectExpr(
  "Year",
@@ -158,7 +225,8 @@ sql_plan == df_plan # True
 
 
 
-# Data Cleaning 
+# DATA CLEANING
+=========================================================================================================================
 
 -- remove null data
 
@@ -167,6 +235,22 @@ how = 'any',
 subset = ['CRSElapsedTime']
 )
 
+-------------------------------------------------
+flights_req_cols_df.na.drop(...)
+Uses the DataFrameNaFunctions API to drop rows with NULL (or NaN) values.
+
+Parameters explained:
+
+how='any' → Drop the row if any of the specified columns in subset are NULL.
+(Alternative: how='all' → Drop only if all are NULL.)
+subset=['CRSElapsedTime'] → Only check the column CRSElapsedTime for nulls.
+So effectively: remove rows where CRSElapsedTime is NULL.
+
+non_null_flights_df will contain all rows from flights_req_cols_df except those where CRSElapsedTime is NULL.
+Alternative --
+non_null_flights_df = flights_req_cols_df.filter(F.col("CRSElapsedTime").isNotNull())
+
+--------------------------------------------------------------------------------------------------------------
 
 -- This will remove all the data of these cols that can't be converted into INT datatype.
 
@@ -179,7 +263,27 @@ flights_valid_data_df = non_null_flights_df.filter(
 )
 
 
+clean_flights_df = flights_valid_data_df\
+  .withColumn("ArrDelay", col("arrDelay").cast("integer"))\
+  .withColumn("ActualElapsedTime",col("actualElapsedTime").cast("integer"))
 
+
+
+clean_flights_df.printSchema()
+
+
+# DATA ENRICHMENT 
+=============================================================================================================================================
+
+# Derive flight Datetime column
+
+from pyspark.sql.functions import col, make_timestamp_ntz, lpad, substring, lit
+
+flights_datetime_df = clean_flights_df.withColumn(
+  "FlightDateTime", 
+  make_timestamp_ntz(
+  col("Year"),
+  col("Month"),
 
 
 
@@ -199,17 +303,4 @@ flights_valid_data_df = non_null_flights_df.filter(
 
 
 
-
-Display 
-  shows data in tabular format
-  limit upto 10000 records or upto 2 MB 
-
-Infer Schema vs Schema 
- when we use infer schema while creating a df,
-  it initiates spark jobs 
-  - forcing spark to infer schema 
- while when we provide a custom schema, it's just like a transformation. 
-- did not invoke a spark job, 
-  strongly typed datatypes, 
-  used in production applications
 
