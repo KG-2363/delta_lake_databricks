@@ -4,35 +4,197 @@
   Each partition processed independently 
   no of partitions = no of tasks 
   impacts performance and shuffle partitions
-  
-  
+
 
 # Driver  -
   creates Spark session
   sends request to cluter manager for resources
   co ordinates tasks, handle failures
+
   
 # Executors - run on worker nodes in a spark cluster and host tasks( for I/O and data processing)
    available CPU cores, memory resources, config settings
    Interact with driver for task coordination and data transfer
    store intermediate ad final results in memory or disk.
+
  
 # Stages are group of tasks that can be executed in parallel.
+
 
 # Principles of Distributed Computing -
 Shared Nothing Architecture  -  Independence, Fault Tolerance, Scalability, Resource Partitioning
   Each node works independently and manages its own resources
   Tasks within a stage run in parallel known as shared nothing mode
 
+
 # Clusters in Databricks Platform -
   All Purpose Clusters - interactive clusters that support notebooks, jobs, dashboards etc. with configurable auto termination.
   Job Clusters - ephemeral clusters that starts when a job runs and terminate automatically upon job completion.
   SQL Warehouses - Optimised clusters for sql query optimization with instant start up and auto scaling to balance cost and performance.
 
+
 # Spark UI 
  Application UI - per application (Spark Session)
   app progress, task execution, dag visualisation, stage details
  Master UI - per cluster worker node status, health and cluster wide resources allocation
+
+
+# Shuffling -
+It is data re distribution across the clusters to perform aggregation operations such as group by, join, sorting.
+needed when data needs to be combined across partitions
+
+Wide transformations
+Key based operations
+data repartitioning
+
+Number of partitions impact performance, overhead and needs to be minimised 
+
+Optimizations
+co located data 
+avoid unnecessary shuffles
+effective partitioning strategies 
+
+
+# Map Shuffle Reduce Model
+Each transformation goes through this simple model.
+
+
+# Handle null methods
+isNull() / isNotNull()
+df.fillna() / df.na.fill()
+df.dropna() / df.na.drop()
+
+
+# Referencing df objects 
+df.select("name")
+df.select(df.first_name)
+df.select(df["name"])
+df.select(col("name").alias("customer_name")) -col when cast(), alias(), desc(), asc()
+
+
+col("name").alias("customer_name")
+col("age").cast(Integertype()) -- CHANGE DATA TYPE
+col("age").isNotNull() -- CHECK FOR NULLS
+col("title").contains("Manager") -- STRING MATCHING
+df.sort(col("c1").desc(),col("c2").asc())
+
+
+# FLIGHTS DATA INGESTION ---------------------------------------------------------
+
+flights_df = spark.read.table("dbacademy_airlines.vo1.flights_small")
+
+flights_df.printSchema()
+
+display(flights_df.limit(10))
+
+flights_req_cols_df = flights_df.select(
+ "Year",
+ "Month",
+ "Day Of Month",
+ "DepTime",
+ "FlightNum",
+ .
+ .
+ .)
+
+flights_count = flights_req_cols_df.count()
+
+print(f"Source data has {flights_count} records")
+
+# Temp View 
+available in SQL Namespace 
+flights_req_cols_df\
+.selectExpr(
+ "Year",
+ "Month",
+ "Day Of Month",
+ "CAST(DepTime AS INT) as DepTime",
+ "FlightNum"
+ .
+ .
+ .
+)\
+.createOrReplaceTempView("flights_temp")
+
+
+# Invalid counts sql using Spark SQl 
+
+invalid_counts_sql = spark.sql("""
+SELECT 
+COUNTIF(Year IS NULL) as null_year_count,
+COUNTIF(Month IS NULL) as month_null_count,
+.
+.
+.
+FROM 
+flights_temp
+""")
+
+display(invalid_counts_sql)
+
+# display invalid counts using dataframe API 
+
+from pyspark.sql.functions import sum, col, when
+
+flights_temp_df = spark.table("flights_temp")
+
+invalid_counts_df = flights_temp_df.select(
+ sum(when(col("Year").isNull(),1).otherwise(0)).alias("Null_Year_count"),
+ sum(when(col("Month").isNull(),1).otherwise(0)).alias("Null_Month_Count"),
+ sum(when(col("Day Of Month").isNull(),1).otherwise(0)).alias("Null_Day_Of_Month_Count"),
+ .
+ .
+ .
+)
+
+display(invalid_counts_df)
+
+-- Both operations have same output as per optimizations 
+sql_plan = invalid_counts_sql.explain()
+
+df_plan = invalid_counts_df.explain()
+
+sql_plan == df_plan # True
+
+
+
+# Data Cleaning 
+
+-- remove null data
+
+non_null_flights_df = flights_req_cols_df.na.drop(
+how = 'any',
+subset = ['CRSElapsedTime']
+)
+
+
+-- This will remove all the data of these cols that can't be converted into INT datatype.
+
+from pyspark.sql.functions import col
+
+flights_valid_data_df = non_null_flights_df.filter(
+  col("Arrdelay").cast("INTEGER").isNotNull() &
+  col("ActualElapsedTime").cast("INTEGER").isNotNull() &
+  col("DepTime").cast("INTEGER").isNotnull()
+)
+
+
+
+
+
+
+ 
+
+
+
+
+
+
+
+
+
+
+
 
 
 
