@@ -236,6 +236,7 @@ subset = ['CRSElapsedTime']
 )
 
 -------------------------------------------------
+
 flights_req_cols_df.na.drop(...)
 Uses the DataFrameNaFunctions API to drop rows with NULL (or NaN) values.
 
@@ -250,9 +251,12 @@ non_null_flights_df will contain all rows from flights_req_cols_df except those 
 Alternative --
 non_null_flights_df = flights_req_cols_df.filter(F.col("CRSElapsedTime").isNotNull())
 
+
 --------------------------------------------------------------------------------------------------------------
 
+
 -- This will remove all the data of these cols that can't be converted into INT datatype.
+
 
 from pyspark.sql.functions import col
 
@@ -284,6 +288,27 @@ flights_datetime_df = clean_flights_df.withColumn(
   make_timestamp_ntz(
   col("Year"),
   col("Month"),
+  col("Day Of Month"),
+  substr(lpad(col("Deptime"),4,"0"), lit(1), lit(2)).cast("integer"),
+  substr(lpad(col("DepTime"),4,"0"), lit(3), lit(2)).cast("integer"),
+  lit(0)
+).drop("Year","Month","Day Of Month","DepTime")
+
+display(flights_datetime_df).limit(10)
+
+
+# Derive Elapsed time Diff 
+
+from pyspark.sql.functions import col
+
+flights_elapsed_time_diff_df = flights_datetime_df.withColumn("Elapsed_Time_Diff",
+col("Actual_Elapsed_Time_Diff") - col("CRSElapsed_Time_Diff")).drop("Actual_Elapsed_Time_Diff","CRSElapsed_Time_Diff")
+
+display(flights_elapsed_time_diff_df).limit(10)
+
+# Categorize Arrdelay column into OnTime, SlightDelay, ModerateDelay, SevereDelay
+
+
 
 
 
