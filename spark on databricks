@@ -308,7 +308,98 @@ display(flights_elapsed_time_diff_df).limit(10)
 
 # Categorize Arrdelay column into OnTime, SlightDelay, ModerateDelay, SevereDelay
 
+sql -- we use case when statement
+pyspark -- when 
+or switch statement in other languages
 
+from pyspark.sql.functions import when 
+
+enriched_flights_df = flights_elapsed_time_diff_df \
+        .withColumn("delay_category", when(col(Arrdelay) <= 0,"On_Time")
+                                      .when(col(Arrdelay <= 15, "Slight_Delay")
+                                      .when(col(Arrdelay <= 60, "Moderate_Delay")
+                                      .otherwise("Severe_Delay"))
+         .drop("Arrdelay")
+display(enriched_flights_df.limit(10))
+
+
+
+# Working with UDFs
+
+from pyspark.sql.functions import pandas_udf 
+
+@pandas_udf("double")
+def normalized_diff(diff_series):
+   return ((diff_series - diff_series.mean()) / diff_series.std() 
+
+udf_example = enriched_flights_df\
+                .withColumn("diff_normalized",normalized_diff("ElapsedTimeDiff"))
+
+display(udf_example)
+
+
+================================================================================================================
+
+BASIC GROUPING 
+------------------
+
+trips_df = spark.read.table("samples.nyctaxi.trips")
+
+location_count = trips_df\
+                  .grouBy("pickup_zip")\
+                  .count()\
+                  .orderBy(desc("count"))
+
+display(location_counts.limit(10))
+
+
+location_stats = trips_df\
+                   .groupBy("pickup_zip")\
+                   .agg(
+                     count("*").alias("total_trips"),
+                     round(avg("trip_distance"),2).alias("avg_distance"),
+                     round(avg("fare_amount"),2).alias("avg_fare"),
+                     round(sum("fare_amount"),2).alias("total_fare_amount")
+                   .orderBy(desc("total_trips"))
+
+display(location_stats.limit(5))
+
+
+-------------------------------------------------------------------------------------
+WINDOW FUNCTIONS
+
+from pyspark.sql.functions import Window
+
+window_by_trips = Window.orderBy(desc("total_trips"))
+window_by_fare = Window.orderBy(desc("avg_fare"))
+
+
+ranked_locations = location_stats\
+               .withColumn("trips_rank",rank().over(window_by_trips))\
+               .withColumn("fare_rank",rank().over(window_by_fare))\
+               .withColumn("fare_quintile", ntile(5).over(window_by_fare)) # divide into five groups by fare
+
+ranked_locations.createOrReplaceTempView("ranked_locations")
+
+------------------------------------------------------------------------------------
+
+
+                     
+
+
+                 
+
+
+
+
+
+
+
+
+
+
+                
+              
 
 
 
