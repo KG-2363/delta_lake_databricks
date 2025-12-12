@@ -383,6 +383,61 @@ ranked_locations.createOrReplaceTempView("ranked_locations")
 
 ------------------------------------------------------------------------------------
 
+joins --
+
+df1.join(df2, "user_id") -- inner by default
+
+df1.join(df2, on=df1.user_id == df2.user_id, how ="inner")
+
+users.alias("u").join(orders.alias("o"), [col("u.id") == col("o.user_id"), col("u.region") == col("o.region")])
+
+df1.unionAll(df2) - to preserve duplicates
+
+-------------------------------------------------------------------------------------
+
+# join strategy 
+small table should be referenced first
+
+small_df.join(large_df,"key")
+
+large_df.join(small_df,"key") -- less efficient
+
+# broadcast - avoids heavy shuffles
+
+from pyspark.sql.functions import broadcast
+
+large_df.join(broadcast(small_df),"key")
+
+------------------------------------------------------------------------------------
+
+enriched_transactions = franchises_df\
+                       .select(
+                       "franchiseID",
+                        col("name").alias("store_name"),
+                        col("city").alias("store_city"),
+                        col("country").alias("store_country")
+                        )    
+                       .join(transactions_df, on="key",how="inner")
+
+full_join = franchises_df\
+            .withColumnRenamed("name","franchise_name")\
+            .join(
+             suppliers_df.select("supplierID",col("name").alias("supplier_name")),
+             on = "key",
+             how = "full_outer"
+             )
+
+
+non_matching_records = full_join.filter(col("franchiseID").isNull() |
+                         col("supplierID").iNull())\
+                         .select("franchiseID","franchisename",
+
+
+
+
+
+
+
 
                      
 
