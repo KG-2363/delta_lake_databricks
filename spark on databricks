@@ -419,6 +419,11 @@ enriched_transactions = franchises_df\
                         )    
                        .join(transactions_df, on="key",how="inner")
 
+
+
+# full Outer Join helps to identify the missing relationships or null records across datasets.
+
+
 full_join = franchises_df\
             .withColumnRenamed("name","franchise_name")\
             .join(
@@ -427,10 +432,252 @@ full_join = franchises_df\
              how = "full_outer"
              )
 
+# supplier ID which is not associated with a franchise --
 
-non_matching_records = full_join.filter(col("franchiseID").isNull() |
-                         col("supplierID").iNull())\
-                         .select("franchiseID","franchisename",
+non_matching_records = full_join.filter(col("franchiseID").isNull() | col("supplierID").iNull())\
+                         .select("franchiseID","franchisename",col("supplierID").alias("orphaned_supplier_id"))
+
+
+================================================================================================================
+
+USING SPARK SQL 
+
+franchises_df.createOrReplaceTempView("franchises")
+suppliers_df.createOrReplaceTempView("suppliers")
+
+%sql
+SELECT f.franchiseId,
+f.name as franchise_name,
+f.supplierID as orphaned_supplier_id
+FROM franchises f
+FULL OUTER JOIN suplliers s
+ON f.supplierID = s.supplierID
+WHERE f.supplierID is null or s.name is null
+
+
+-----------------------------------------------------------------------
+
+COMPLEX DATA TYPES IN SPARK --
+
+
+Arrays, maps and structs  -- Native to Spark, execution is faster
+
+Struct types maintain a logical grouping of related fields like a table 
+            accesed using dot notation or getField() column method.
+
+functions for creating collections - collect_list, collect_set - Uses in aggregation pipelines
+
+manipulate and transform array type columns using functions - explode, array_contains and element_at
+
+# JSON STRINGS vs STRUCTS
+
+A json string is just a string with data formatted in JSON.
+
+To Spark, it is just a string untill it's parsed.
+
+Struct is spark native and hence doesn't need parsing saving memory and computation during transformation.
+
+Convert early using from_json and schema 
+
+Example 
+id, json_data
+1, { "user_id": 100,"features":{"score":0.8}}
+
+schema = StructType([ StructField("user_id",LongType()), StructField("features",MapType(stringType(), DoubleType())) ])
+
+df2 = df1.withColumn("parsed", from_json(col("json_data"),schema))
+
+EXPLODE Function --
+Unnesting nested data in arrays while preserving other columns 
+One row per array element
+id, items 
+1, ["a","b","c"]
+
+df.select("id", explode("items").alias("item")
+
+Result -
+1,a
+1,b
+1,c
+
+
+array_contains(col,val) -- tests if array conatins specific value 
+e.g. array_contains(items, "a")
+
+size(col) -- returns number of elements 
+e.g. size(items)
+
+element_at(col,n) -- returns nth element (1 based indexing)
+e.g.  element_at(items,2)
+
+array_distinct(col) -- removes duplicate from array columns 
+e.g. array_distinct(items)
+
+
+# Aggregating to Collections --
+grouping items into array 
+
+collect_list() -- aggregate all values from a columns to an array
+                  commonly used with groupBy to build arrays of related values within each group
+
+e.g  df.groupBy("region")\
+       .agg(
+            collect_list("product").alias("all_products"),
+            collect_set("product").alias("distinct_products")
+           )
+
+# Hands on example datasets ---
+
+dataset --
+
+raw_user_df = spark.read.table("raw_user_data")
+
+raw_user_df.printSchema()
+
+user_id  string
+name  string 
+active  string
+signup_date  string
+interests  string  ["hiking", "ML", "Photography"]
+recent_purchases  string [{"product_id" : 101, "name":"ANSH"...}
+
+
+Interests is an array of strings, using predefined schema
+
+
+interests_schema = ArrayType(StringType())
+
+
+recent_purchases_json = raw_user_data_df.select("recent_purchases").limit(1).collect()[0][0]
+
+
+recent_purchases_schema = schema_of_json(lit(recent_purchases_json))
+
+
+
+parsed_users_df = raw_user_data_df.select(
+    col("user_id").cast("integer")
+    col("name"),
+    col("active").cast("boolean"),
+    col("signup_date").cast("date"),
+    from_json(col("interests"), interests_schema).alias("interests"),
+    from_json(col("recent_purchases"),recent_purchases_schema).alias("recent_purchases")
+)
+
+
+interests array - element string 
+purchases array - element struct 
+
+
+
+display(
+   parsed_users_df.select(
+  "user_id",
+   array_size("interests").alias("number_of_interests"),
+   array_size("purchases").alias("number_of_purchases")
+   )
+)
+
+
+user_101s_interests_df = parsed_users_df.select("user_id","interests").filter(parsed_users_df.user_id == 101)
+display(user_101s_interests_df)
+
+
+
+display(
+    user_101s_interests_df.select(
+       "user_id",
+        explode("interests").alias("interest")
+      )
+)
+
+
+exploded_df = parsed_users_df.select("user_id", explode("interests").alias("interest"))
+
+
+user_interests_df = exploded_df.groupBy("user_id").agg(collect_list("interest).alias("interests"))
+
+
+------------------------------------------------------------------------------------------------------------
+
+
+Referencing structs fields 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+       
+   
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
