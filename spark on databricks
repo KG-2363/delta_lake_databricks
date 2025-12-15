@@ -530,9 +530,12 @@ e.g  df.groupBy("region")\
 
 dataset --
 
+
 raw_user_df = spark.read.table("raw_user_data")
 
+
 raw_user_df.printSchema()
+
 
 user_id  string
 name  string 
@@ -602,6 +605,67 @@ user_interests_df = exploded_df.groupBy("user_id").agg(collect_list("interest).a
 
 
 Referencing structs fields 
+
+
+
+exploded_purchases_df = raw_user_df.select("user_id"),explode("recent_purchases").alias("purchase"))
+
+display(exploded_purchases_df)
+
+recent_purchases_df = exploded_purchases_df.select(
+        "user_id",
+         col("purchase.date").alias("purchase_date"),
+         col("purchase.product_id").alias("product_id"),
+         col("purchase.price").alias("purchase_price"),
+         col("purchase.name").alias("purchase_name")
+     )
+
+display("recent_purchases_df)
+
+
+
+field_access_df = exploded_purchases_df.select(
+        "user_id",
+         col("purchase").getField("date").alias("purchase_date"),
+         col("purchase").getField("product_id").alias("product_id"),
+         col("purchase").getField("price").alias("product_price"),
+         col("purchase").getField("name").alias("purchase_name")
+     )
+
+
+
+Pivot method -- It is used to transform row data into columnar format, creating a cross tabulation.
+
+
+
+pivot_df = (recent_purchases_df
+             .groupBy("user_id"),
+             .pivot("product_name"),
+             .agg(count("product_id").alias("quantity_purchases"))
+             .fillna(0)
+       )
+
+
+
+
+
+             
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                   
 
 
 
