@@ -1,1 +1,374 @@
+Stream Processing --
+
+A stream is an unbound dataset with neither begining nor end.
+
+Spark Streaming 
+-----------------
+
+Built on the RDD API
+Discretized streams model(D Streams)
+Processing data in small time based RDD batches
+
+
+
+Structured Streaming 
+---------------------
+
+Built on dataframe / dataset API
+Introduced event time processing
+simplified API with SQL like operations
+Better handling of late and out of order data with watermarking 
+
+
+It treats streaming data as an infinite table, 
+    each new record is appended as a row,
+    queries are updated,
+    same dataframe API as batch,
+    automatic optimization of query plans
+
+
+Microbatching - processes a stream as a series of small batches 
+  data collected into time based chunks 
+  each chunk processed as a mini-batch job
+  typical batch intervals - 100ms
+  As the batch interval becomes shorter, processing becomes closer to real time
+
+Use cases -
+fraud detection 
+live dashboard
+anomaly detection
+clickstream analysis
+sensor & IOT monitoring,
+data ingestion and trasformation
+
+
+Kafka, Kinesis, Event Hubs, Alerts/Notifications, Lakehouse( Delta lake, Iceberg)
+
+
+Auto Loader is a datbricks source for high performance cloud storage ingestion with auto schema handling.
+   automatically tracks new files in cloud storage and supports schema changes, making it handy for evolving ETL tasks.
+
+
+DATA STREAM READER AND DATA STREAM WRITER --
+
+# DATA STREAM READER 
+---------------------------
+
+creates streaming dataframes 
+accesed through SparkSession.readStream
+
+
+df = spark.readStream \
+          .format("kafka")\
+          .option("kafka.bootstrap.servers","host:port")\
+          .option("subscribe","topic1")
+          .load()
+
+
+# DATA STREAM WRITER
+---------------------------
+
+A streaming query is analogous to an action in the DataFrame API, it will trigger a sequence of jobs 
+
+
+query = df.writeStream\
+         .format("kafka")
+         .outputMode("append")
+         .start()
+
+
+
+Streaming transformation -
+
+df = ( spark.readStream
+            .option("maxfilesPerTrigger",1)
+            .format("delta")
+            .load(your_input_path)
+)
+
+
+email_traffic_df = df.filter(col("traffic_source") == "email")
+
+
+email_query = ( email_traffic_df
+                 .writeStream
+                 .outputMode("append")
+                 .format("delta")
+                 .queryName("email_traffic")
+                 .trigger(processingTime = 1 sec)
+                 .option("checkPointLocation", checkpoint_path)
+                 .start("your_output_path")
+            )
+
+
+emailquery.stop()
+
+emailquery.awaitTermination()
+
+
+# TRIGGERS 
+---------------
+
+Controlling when structured Streaming Processes Data -
+
+
+1. DEFAULT Trigger - processes data as soon as the previous micro batch completes 
+   df.writeStream.start()
+
+
+2. FIXED INTERVAL Triggers - processes data at specified time intervals
+   df.writeStream\
+     .trigger(processingTime = '2 minutes')\
+     .start()
+
+
+3. AVAILABLE NOW TRIGGER -- processed avialble data then stops
+   won't wait for more new data to arrive afterwards
+   df.writeStream\
+     .trigger(availableNow = True)\
+     .start()
+
+
+
+Structured streaming writes outputs to sink methods 
+---------------------------------------------------------
+
+
+1. APPEND (default)
+  only adds new records to the sink
+  best for stateless queries without aggregation
+
+
+2. UPDATE (ideal for dashboards and real time metrics)
+  modifies existing records and add new ones
+  only output records that changed since last trigger
+
+
+3. COMPLETE (ideal for running totals or leaderboards)
+  writes entire result table to sink each time 
+  required for some aggregations
+
+
+df.isStreaming() -- returns True or False 
+streaming_query.id 
+streaming_query.status
+streaming_query.lastProgress
+
+
+========================================================================
+
+EXAMPLE LABS 
+
+from pyspark.sql.functions import *
+from pyspark.sql.types import *
+
+schema = StructType([
+     StructField("customer_id", LongType(), True),
+     StructField("notifications", StringType(), True),
+     StructField("order_id", LongType(), True),
+     StructField("order_timestamp", LongType(), True)
+)]
+
+
+stream_df = spark.readStream\
+                .format("json")\
+                .schema(schema)\
+                .option("
+
+
+maxFilesperTrigger",1)\
+                .option("path","/Volumes/...")\
+                .load()
+
+print(f"isStreaming : {stream_df.isStreaming}")
+
+
+transformed_stream = stream_df
+                .withColumn("notification_status", col("notifications").isNotNull())
+                .withColumn("order_details",concat(lit("Order #"),col("order_id").cast("string")))
+
+
+notifications_stream = stream_df.filter(col("notifications")=="Y")
+
+
+# Stop any existing queries with the same name --
+
+
+for q in spark.streams.active:
+   if q.name == "orders_streaming_table":
+      q.stop()
+
+
+# Write to memory sink for interactive querying
+
+
+memory_query = stream_df.writeStream\   
+                 .format("memory")\
+                 .queryName("orders_streaming_table")
+                 .outputMode("append")
+                 .start()
+
+
+select notifications, count(*) as num_notifications from orders_streaming_table group by notifications
+
+
+# USING QUERY to control processing --
+
+for q in spark.streams.active:
+   if q.name == "spark_streaming_table":
+      q.stop()
+
+
+triggered_query = stream_df\
+              .withColumn("processing_timestamp",current_timestamp())\
+              .writeStream\
+              .format("memory")\
+              .queryName("triggered_query_table")\
+              .outputMode("append")\
+              .trigger("ProcessingTime"="10 seconds")\
+              .start()
+
+
+
+select processing_ts, count(*)
+from triggered_query_table
+group by processing_ts
+order by processing_ts
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+     
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+         
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
