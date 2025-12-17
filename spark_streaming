@@ -108,7 +108,7 @@ emailquery.awaitTermination()
 
 # TRIGGERS 
 ---------------
-
+It helps to control how long a batch window is.
 Controlling when structured Streaming Processes Data -
 
 
