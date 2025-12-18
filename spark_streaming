@@ -173,10 +173,7 @@ schema = StructType([
 stream_df = spark.readStream\
                 .format("json")\
                 .schema(schema)\
-                .option("
-
-
-maxFilesperTrigger",1)\
+                .option("maxFilesperTrigger",1)\
                 .option("path","/Volumes/...")\
                 .load()
 
