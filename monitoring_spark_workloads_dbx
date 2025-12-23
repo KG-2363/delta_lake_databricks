@@ -1,1 +1,395 @@
+describe extended table_name 
+-- for delta --by default it's Provider : DELTA 
+
+describe detail table_name 
+-- table statistics in a table format 
+  num_files = 1 
+
+describe history table_name 
+-- versioning = 1
+-- timestamp 
+-- username
+-- Operation
+-- operationParameters
+
+01: Introduction to Delta Lake
+-----------------------------------------------------------------------------------------------------------------------
+This demonstration showcases Delta Lake's key features using the DataFrame API with Python:
+
+Setting up Delta tables
+Basic operations (INSERT, UPDATE, DELETE)
+MERGE operations
+Schema evolution
+Time travel capabilities
+Performance optimization
+
+
+USE CATALOG dbacademy;
+USE SCHEMA dbacademy.<your unique schema name>;
+
+
+
+from pyspark.sql.functions import col
+order_df = spark.read.table("samples.tpch.orders")
+
+
+
+
+# Transform and save the orders data using DataFrame API
+
+orders_df = (
+  order_df.select(
+    col("o_orderkey").alias("order_id"),
+    col("o_custkey").alias("customer_id"),
+    col("o_orderstatus").alias("status"),
+    col("o_totalprice").alias("total_price"),
+    col("o_orderdate").alias("order_date"),
+    col("o_orderpriority").alias("priority"),
+    col("o_clerk").alias("clerk"),
+    col("o_shippriority").alias("ship_priority"),
+    col("o_comment").alias("comment")
+  )
+  .filter(col("o_orderdate") >= "1996-01-01")
+  .limit(10000)
+)
+
+
+# Write the DataFrame as a Delta table
+orders_df.write.mode("overwrite").option("overwriteSchema", "true").saveAsTable("delta_orders")
+
+# Display the Delta table
+display(spark.table("delta_orders"))
+
+
+NOTE: Delta Lake is the default format for Databricks runtimes, otherwise you would need to use:
+orders_df.write.format("delta").mode("overwrite").option("overwriteSchema", "true").saveAsTable("delta_orders")
+
+# SQL EQUIVALENT --
+
+%sql
+-- The SQL equivalent of above spark query
+
+CREATE OR REPLACE TABLE delta_orders_sql
+AS
+SELECT
+  o_orderkey AS order_id,
+  o_custkey AS customer_id,
+  o_orderstatus AS status,
+  o_totalprice AS total_price,
+  o_orderdate AS order_date,
+  o_orderpriority AS priority,
+  o_clerk AS clerk,
+  o_shippriority AS ship_priority,
+  o_comment AS comment
+FROM samples.tpch.orders
+WHERE o_orderdate >= '1996-01-01'
+LIMIT 10000;
+
+SELECT * FROM delta_orders_sql;
+
+
+
+
+-- Inspect table metadata
+DESCRIBE EXTENDED delta_orders
+
+
+# Inspecting using spark.sql
+display(spark.sql("DESCRIBE EXTENDED delta_orders"))
+
+
+%sql
+-- This is a delta lake specific command which returns detailed metadata about a Delta table including statistics
+DESCRIBE DETAIL delta_orders
+
+
+-- Use this command to see the history of changes to the delta table, we will revisit this later..
+DESCRIBE HISTORY delta_orders
+
+
+# We can use the DeltaTable class to interact with the Delta table programmatically
+
+from delta.tables import DeltaTable
+
+# Get the Delta table
+delta_table = DeltaTable.forName(spark, "delta_orders")
+
+display(delta_table.history())
+
+
+C. Basic Delta Operations with DataFrame API
+------------------------------------------------------------------------------------------
+Let's demonstrate basic DML operations with Delta tables using the DataFrame API.
+
+# Create a DataFrame with new records
+from datetime import date
+from decimal import Decimal
+
+
+new_orders = spark.createDataFrame([
+    (999997, 12345, 'P', Decimal('1234.56'), date(2023, 2, 15), "1-URGENT", "Clerk#000000123", 0, "New test order using Python"),
+    (999996, 12346, 'O', Decimal('5678.90'), date(2023, 2, 16), "2-HIGH", "Clerk#000000456", 0, "Another test order using Python")
+], schema=orders_df.schema)
+
+
+# Append new records to the Delta table
+new_orders.write.format("delta").mode("append").saveAsTable("delta_orders")
+
+
+# Verify the new records
+display(spark.table("delta_orders").filter(col("order_id").isin([999997, 999996])))
+
+
+
+%sql
+-- Insert two more records using SQL
+INSERT INTO delta_orders
+VALUES 
+(999999, 12345, 'P', DECIMAL('1234.56'), DATE('2023-02-15'), '1-URGENT', 'Clerk#000000123', 0, 'New test order using SQL'),
+(999998, 12346, 'O', DECIMAL('5678.90'), DATE('2023-02-16'), '2-HIGH', 'Clerk#000000456', 0, 'Another test order using SQL');
+
+-- Verify the insertion
+SELECT * FROM delta_orders WHERE order_id IN (999999, 999998);
+
+
+# Check the history again now
+display(delta_table.history())
+
+
+-- Whoops!
+DELETE FROM delta_orders
+
+
+# Check the history again now
+display(delta_table.history())
+
+
+
+# Check the delta dataframe count
+delta_table.toDF().count()
+
+
+
+
+D. Time Travel Operations
+-----------------------------------------------------------------------------------------------------------------------------
+Explore Delta Lake's time travel capabilities for data auditing and recovery.
+Let's use this feature to query previous versions of our data. Time Travel can be performed using:
+
+Version numbers: Integer values starting from 0 (e.g., VERSION AS OF 2)
+Timestamps: Formatted as ISO-8601 strings (e.g., TIMESTAMP AS OF '2023-02-15T12:30:00.000Z')
+
+# Read a specific version of the Delta table
+previous_version = spark.read.option("versionAsOf", 2).table("delta_orders")
+display(previous_version.filter(col("order_id").isin([999999, 999998, 999997, 999996])))
+
+
+-- The SQL equivalent of ☝️
+SELECT * FROM delta_orders VERSION AS OF 2
+WHERE order_id IN (999999, 999998, 999997, 999996);
+
+%sql
+DESCRIBE HISTORY delta_orders
+
+Replace with an actual timestamp of version from your DESCRIBE HISTORY results.
+Format example: '2023-02-15T12:30:00.000Z' or '2023-02-15 12:30:00'
+
+
+# We can also traverse historical versions using a timestamp
+timestamp_to_restore_to = 'REPLACE THIS VALUE WITH A TIMESTAMP' 
+display(
+    spark.read.option("timestampAsOf", timestamp_to_restore_to).table("delta_orders")
+)
+
+
+
+E. Restore Operations
+------------------------------------------------------------------------------------------------
+Learn how to recover data using Delta Lake's restore capabilities.
+
+
+# Restore to the original version using SQL
+spark.sql("RESTORE TABLE delta_orders TO VERSION AS OF 1")
+
+# Verify the restore worked
+display(spark.table("delta_orders"))
+
+
+
+
+# Check the history again now
+display(delta_table.history())
+
+
+F. Using MERGE Function
+------------------------------------------------------------------------------------------------------------
+Delta Lake provides powerful MERGE capabilities for upsert operations (update + insert) - as well as conditional DELETEs. 
+Before jumping to MERGE lets look at Upsert functionality
+
+What is an Upsert?
+
+An "upsert" combines UPDATE and INSERT operations in a single atomic transaction
+If a matching record exists, it's updated; if not, a new record is inserted
+This is particularly useful for scenarios like:
+Processing change data capture (CDC) feeds
+Handling slowly changing dimensions (SCD)
+Streaming data integration
+Deduplication with latest values
+
+Let's see how Upsert can be used in MERGE operation
+
+%sql
+-- First, create a temporary view with updated order data
+CREATE OR REPLACE TEMPORARY VIEW updated_orders AS
+SELECT 999996 AS order_id, 12346 AS customer_id, 'O' AS status, 
+       CAST(6000.00 AS DECIMAL(18,2)) AS total_price, -- Updated price
+       CAST('2023-02-16' AS DATE) AS order_date, 
+       '1-URGENT' AS priority, -- Changed from 2-HIGH to 1-URGENT
+       'Clerk#000000456' AS clerk, 
+       0 AS ship_priority,
+       'Updated order with higher priority' AS comment -- Updated comment
+UNION ALL
+-- Add a new record that doesn't exist in the table yet
+SELECT 999995 AS order_id, 12347 AS customer_id, 'P' AS status, 
+       CAST(2500.50 AS DECIMAL(18,2)) AS total_price,
+       CAST('2023-02-17' AS DATE) AS order_date, 
+       '3-MEDIUM' AS priority,
+       'Clerk#000000789' AS clerk, 
+       1 AS ship_priority,
+       'New order via MERGE' AS comment;
+
+-- Now perform the MERGE operation
+MERGE INTO delta_orders
+USING updated_orders AS updates
+ON delta_orders.order_id = updates.order_id
+WHEN MATCHED THEN
+  UPDATE SET 
+    total_price = updates.total_price,
+    priority = updates.priority,
+    comment = updates.comment
+WHEN NOT MATCHED THEN
+  INSERT (order_id, customer_id, status, total_price, order_date, priority, clerk, ship_priority, comment)
+  VALUES (updates.order_id, updates.customer_id, updates.status, updates.total_price, 
+          updates.order_date, updates.priority, updates.clerk, updates.ship_priority, updates.comment);
+
+-- Verify the results
+SELECT * FROM delta_orders WHERE order_id IN (999995, 999996);
+
+
+NOTE: The upsert is performed by the MERGE statement,which updates existing rows and inserts new ones
+based on whether the order_id exists in the target table (delta_orders)
+
+
+-- See the MERGE operation in the table history
+DESCRIBE HISTORY delta_orders
+
+
+G. Optimizing File Sizes with OPTIMIZE
+---------------------------------------------------------------------------------------------------------------------
+
+Delta Lake tables can accumulate many small files over time, especially after numerous UPDATE, DELETE, or MERGE operations. 
+The OPTIMIZE command helps maintain performance by compacting these small files into larger ones, reducing the metadata
+that needs to be processed during queries.
+
+Note that Databricks automatically applies optimized writes to Delta tables by default in newer runtimes, 
+which helps reduce small file issues proactively.
+
+
+
+-- Note the value of the NumFiles column
+DESCRIBE DETAIL delta_orders
+
+-- Optimize the delta_orders table to improve query performance
+OPTIMIZE delta_orders
+ZORDER BY (order_date, customer_id);
+
+-- Check optimization metrics
+DESCRIBE HISTORY delta_orders;
+
+-- Now look at the NumFiles column again
+DESCRIBE DETAIL delta_orders
+
+
+H. Removing Older Versions using VACUUM
+----------------------------------------------------------------------------------------------------------------------
+
+Delta Lake maintains a history of changes, allowing time travel queries. However, this can consume storage space over time.
+
+The VACUUM command permanently removes files that are no longer referenced by the latest versions of the table.
+
+
+-- First, check the retention period (default is 7 days)
+SET spark.databricks.delta.retentionDurationCheck.enabled = false;
+
+-- Remove files no longer referenced by the Delta table and are older than the retention period
+-- See what would be deleted without actually removing files (dry run)
+VACUUM delta_orders RETAIN 24 HOURS DRY RUN;
+
+
+
+%sql
+-- Now do it for real...
+-- WARNING: This will permanently remove access to older versions
+VACUUM delta_orders RETAIN 24 HOURS;
+
+-- Note that VACUUM operations appear in the log as well
+DESCRIBE HISTORY delta_orders
+
+
+Databricks provides automatic VACUUM behavior:
+
+Default retention period is 7 days (168 hours)
+Delta tables are automatically vacuumed according to this retention period
+Safety checks prevent accidental removal of versions less than 7 days old
+
+NOTE: Vacuumed version may still be available after a VACUUM operation, this is due to delta caching, however don't rely on
+this, the version files could get evicted from delta cache at any stage (and will not longer be available after the cluster
+restarts)
+
+
+Key Takeaways
+Versioning and Time Travel
+
+All changes create new versions
+Access historical versions easily
+Query data as of specific timestamps
+Data Recovery
+
+Restore to previous versions
+Audit data changes
+Track modifications
+Optimization
+
+Regular table optimization
+Z-ORDER indexing
+File compaction
+Maintenance
+
+Implement regular cleanup
+Update statistics
+Monitor table health
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
