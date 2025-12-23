@@ -38,7 +38,23 @@
    store intermediate ad final results in memory or disk.
 
 
- 
+ # Slots - In Apache Spark, a slot is a unit of execution that is used to execute tasks on a worker node. 
+A slot is essentially a thread of execution that is managed by the Spark executor.
+When you submit a Spark job, the Spark executor will allocate a number of slots on each worker node in the cluster.
+The number of slots allocated is determined by the spark.executor.cores configuration property, 
+which specifies the number of CPU cores that each executor should use. 
+By default, each executor will use all the available CPU cores on a worker node, 
+but this can be configured to a smaller value if desired.
+
+Tasks in a Spark job are executed in parallel by multiple slots, with each task being assigned to a slot for execution. 
+This allows Spark to make efficient use of the available CPU resources on a cluster and to parallelize the execution of tasks.
+Slots can be either "on-demand" or "reserved". On-demand slots are allocated to a Spark job as needed, 
+while reserved slots are allocated to a job in advance and are not released until the job completes. 
+By default, Spark uses on-demand slots, but you can configure your cluster to use reserved slots instead by setting the spark.
+dynamicAllocation.enabled configuration property to false.
+Slots are not the same thing as executors. Executors could have multiple slots in them, and tasks are executed on slots.
+
+
 # Stages are group of tasks that can be executed in parallel.
 
 
@@ -103,8 +119,18 @@ Options support: Yes—you can chain reader options before .table(...). Whether 
 df = spark.read.option("timeZone", "UTC").table("sales.daily_orders")
 df = spark.read.table("sales.daily_orders")  # plain read
 
-------------------------------------------------------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------------
 
+df.write.mode("overwrite").option("compression", "snappy").save("path")
+Parquet is the default file format. If you don’t include the format() method, the DataFrame will still be saved as a Parquet file.
+
+And if the file name already exist in the path given and if you don't include option mode("overwrite")  you will get an error.
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------
+df.filter(col("count") < 2)
+df.where("count < 2")
+
+------------------------------------------------------------------------------------------------------------------------------
 # Map Shuffle Reduce Model
 Each transformation goes through this simple model.
 
