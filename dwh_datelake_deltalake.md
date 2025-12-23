@@ -126,9 +126,10 @@ MERGE operations
  df.write.mode(append).save(table_path)
 
 
- DESCRIBE HISTORY -- shows version history of a delta table 
- DESCRIBE DETAIL -- info about the table itself
- 
+ DESCRIBE HISTORY delta_orders -- shows version history of a delta table 
+ DESCRIBE DETAIL delta_orders -- info about the table itself
+   gives specific details about the table, also has numFiles col which shows 1 -- we will explore in OPTIMIZE command
+   
  
  OPTIMIZE & VACCUM help manage file sizes and storage, improving performance and keep table tidy.
 
