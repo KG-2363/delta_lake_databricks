@@ -1,0 +1,361 @@
+03: Optimizing Apache Spark
+This notebook demonstrates key performance optimization techniques for Apache Spark applications using the TPC-H dataset:
+
+
+Understanding Spark Performance - Resource utilization and data flow patterns
+
+Partitioning Strategies - DataFrame partitioning for better distribution
+
+Reducing Shuffle Operations - Minimizing expensive shuffle operations
+
+DataFrame Caching - Effective data persistence strategies
+
+Query Optimization - Understanding Catalyst optimizer and execution plans
+
+Throughout this notebook, we'll examine the Spark UI at each step to understand the impact of various optimizations.
+
+
+# make copies of "lineitem", "orders" tables
+
+for table in ["lineitem", "orders"]:
+    print(f"Creating local copy of {table}...")
+    
+    # Create a local copy
+    spark.table(f"samples.tpch.{table}").write.mode("overwrite").saveAsTable(table)
+
+
+
+
+
+    orders_df = spark.table("orders")
+lineitems_df = spark.table("lineitem")
+
+
+
+
+from pyspark.sql.functions import col, sum, count, avg
+import time
+
+# Get cluster info for better partitioning
+num_cores = sc.defaultParallelism
+print(f"Default parallelism (cores): {num_cores}")
+
+# Get shuffle partitions to 200 (Spark default)
+shuffle_partitions = spark.conf.get("spark.sql.shuffle.partitions")
+print(f"Default shuffle partitions: {shuffle_partitions}")
+
+
+
+
+C. Understanding Partitioning and Shuffling
+-------------------------------------------------------------------------------------------------------------------------
+
+Let's deep dive into partitioning and understand how different operations affect the numbers or sizes of partitions and 
+shuffling.
+
+1. Default Partitioning
+The default number of partitions in an input dataframe (read using the DataFrameReader from files or from a table) is 
+equivalent to the number of files in the dataset
+
+# Note that the default number of partitions in the dataframe is equivalent to the number of files in the dataset
+print(f"Default partitions (lineitem): {lineitems_df.rdd.getNumPartitions()}")
+display(spark.sql("DESCRIBE DETAIL lineitem").select("numFiles"))
+
+
+
+2. Narrow Transformations and Partition Counts
+Narrow transformations (such as filter, select, drop, withColumn) will either retain the same number of partitions or 
+reduce the number of partitions in the resultant dataframe, let's have a look.
+
+print(f"Starting number of partitions: {lineitems_df.rdd.getNumPartitions()}")
+high_value_lineitems_df = lineitems_df.filter("l_extendedprice > 60000 AND l_linenumber < 2")
+print(f"Number of partitions (after narrow transformation): {high_value_lineitems_df.rdd.getNumPartitions()}")
+
+
+
+3. Narrow Transformations and Skew
+Narrow transformations such as filter can create uneven partition sizes (as filtered records may not be distributed equally),
+to demonstrate this we will write out the results of our dataframe and look at the resultant file sizes.
+
+def show_partition_sizes(input_dataframe):
+    # Define the output directory
+    output_path = f"{DA.catalog_name}/{DA.schema_name}/high_value_lineitems"
+
+    # Remove the directory if it already exists
+    dbutils.fs.rm(output_path, True)
+
+    # Write the DataFrame as parquet files
+    input_dataframe.write \
+        .format("parquet") \
+        .option("compression", "none") \
+        .mode("overwrite") \
+        .save(output_path)
+
+    # List the files in the directory
+    print("Files in the output directory:")
+    files = dbutils.fs.ls(output_path)
+    for i, file in enumerate([f for f in files if f.path.endswith(".parquet")]):
+        print(f"Partition {i}: Size: {file.size} bytes")
+
+show_partition_sizes(high_value_lineitems_df)
+
+
+
+# To normalize skew, lets repartition
+balanced_df = high_value_lineitems_df.repartition(10)
+show_partition_sizes(balanced_df)
+
+# Alternatively you could repartition by a specific column (or columns) for better data distribution
+# balanced_df = high_value_lineitems_df.repartition(10, "l_orderkey")
+# show_partition_sizes(balanced_df)
+
+
+
+4. Analyzing Shuffling
+Look at the Spark UI for the job above☝️. 
+Notice that the above operation forced 90% of the dataset to shuffle (moving data between partitions).
+
+# Use coalesce to reduce partitions without full shuffle, this may be better when you just need fewer partitions and don't mind some imbalance
+# Note: Coalesce does not address skew directly however it will consolidate partitions
+smaller_df = high_value_lineitems_df.coalesce(5)
+show_partition_sizes(smaller_df)
+
+5. Wide Transformations and Partitioning
+Wide transformations (like groupBy, join, repartition) cause data to be shuffled across the network. They affect partitioning in significant ways:
+
+They typically change the number of partitions (based on spark.sql.shuffle.partitions)
+They redistribute data across partitions based on keys
+They can create or resolve data skew depending on how they're used
+
+
+# Check partitions in original DataFrame
+print(f"Original partitions in lineitems_df: {lineitems_df.rdd.getNumPartitions()}")
+# Apply a groupBy (wide transformation)
+grouped_lineitems = lineitems_df.groupBy("l_suppkey").count()
+print(f"Partitions after groupBy: {grouped_lineitems.rdd.getNumPartitions()}")
+# The resultant number of partitions is determined by AQE (adaptive query execution)
+
+
+
+D. Understanding Shuffle Partitions and AQE
+Let's demonstrate the effects of the spark.sql.shuffle.partitions configuration setting and Adaptive Query Execution (AQE).
+
+
+
+
+# Force disable AQE for a test
+spark.conf.set("spark.sql.adaptive.enabled", "false")
+grouped_lineitems_no_aqe = lineitems_df.groupBy("l_suppkey").count()
+print(f"Partitions after groupBy with AQE disabled: {grouped_lineitems_no_aqe.rdd.getNumPartitions()}")
+
+# Why 200? remember the default value of spark.sql.shuffle.partitions
+
+
+
+# Let's set the number of shuffle partitions to the number of cores
+spark.conf.set("spark.sql.shuffle.partitions", num_cores)
+grouped_lineitems_no_aqe_updated_shuffle_parts = lineitems_df.groupBy("l_suppkey").count()
+print(f"Partitions after groupBy with AQE disabled and shuffle partitions set: {grouped_lineitems_no_aqe_updated_shuffle_parts.rdd.getNumPartitions()}")
+
+
+
+# Let's re-enable AQE now and re-set the number of shuffle partitions to the default
+spark.conf.set("spark.sql.shuffle.partitions", 200)
+spark.conf.set("spark.sql.adaptive.enabled", "true")
+
+
+
+E. Analyzing Explain Plans
+Spark's explain() function is a powerful tool for understanding query execution. It shows how Spark's Catalyst optimizer transforms your code into execution steps.
+
+Let's examine explain plans for different operations to better understand optimization opportunities:
+
+
+
+
+
+# Simple query explain plan
+simple_query = lineitems_df.filter("l_shipdate > '1995-01-01'").groupBy("l_shipmode").count()
+
+print("SIMPLE QUERY EXPLAIN:")
+simple_query.explain()
+
+
+
+
+inefficient_query = (
+    lineitems_df
+    # Filter applied late in the transformation
+    .select("l_orderkey", "l_shipdate", "l_shipmode", "l_extendedprice", "l_discount")
+    # Join before filtering (inefficient)
+    .join(
+        orders_df.select("o_orderkey", "o_orderdate", "o_orderpriority"),
+        lineitems_df["l_orderkey"] == orders_df["o_orderkey"]
+    )
+    # Filters that could be pushed down before the join
+    .filter(col("l_shipdate") > "1995-01-01")
+    .filter(col("o_orderdate") > "1995-01-01")
+    # Late filter on shipmode
+    .filter(col("l_shipmode").isin("AIR", "MAIL"))
+    # Calculate revenue
+    .withColumn("revenue", col("l_extendedprice") * (1 - col("l_discount")))
+    # Group and aggregate
+    .groupBy("l_shipmode", "o_orderpriority")
+    .agg(
+        sum("revenue").alias("total_revenue"),
+        count("*").alias("order_count")
+    )
+)
+
+
+
+# Show the logical plan (what was written)
+print("INEFFICIENT QUERY PLAN:")
+inefficient_query.explain(mode="formatted")
+
+
+
+# Show the optimized physical plan (what Spark will actually execute)
+print("\nPHYSICAL PLAN (what Spark optimizes it to):")
+inefficient_query.explain(mode="extended")
+
+
+
+Looking at these two execution plans, we can see how Spark optimized the inefficient query:
+
+Filter Pushdown: In the optimized plan, notice how the filters were pushed down to the scan operations:
+
++- PhotonScan parquet ...lineitem
+   DictionaryFilters: [(l_shipdate#69 > 1995-01-01), l_shipmode#73 IN (AIR,MAIL)]
+Even though we placed these filters after the join in our query, Spark moved them to the earliest possible point
+(during the initial data read).
+
+Column Pruning: The optimizer only reads the columns it actually needs:
+
+ReadSchema: struct<l_orderkey:bigint,l_extendedprice:decimal(18,2),l_discount:decimal(18,2),l_shipdate:date,l_shipmode:string>
+Even though we selected more columns in our initial query, Spark only reads what's necessary for the final result.
+
+Filter Combination: In the optimized logical plan, you can see how multiple separate filters have been combined:
+
++- Filter (((isnotnull(l_shipdate#69) AND isnotnull(l_orderkey#59L)) AND (l_shipdate#69 > 1995-01-01)) AND l_shipmode#73 IN (AIR,MAIL))
+All the filter conditions were combined into a single operation.
+
+Projection Optimization: The execution only projects necessary columns at each step.
+
+The Bottom Line
+Spark's optimizer transformed this into a much more efficient plan that:
+
+Filters data as early as possible
+Reads only necessary columns
+Combines multiple filter conditions
+Uses a more efficient ordering of operations
+NOTE: this doesn't mean you shouldn't write queries as you would expect them to be executed!
+
+
+
+F. DataFrame Caching
+Caching can significantly improve performance for iterative operations on the same data. Let's demonstrate its impact.
+
+First, let's run a sequence of operations without caching:
+
+👀 Spark UI Observation: Take note of how each query has to read from the source tables repeatedly.
+
+Look at the "Input" metrics that show how much data is read
+Notice the full execution plan for each job
+
+
+from pyspark.sql.functions import avg, max
+
+# Uncached query
+high_value_line_items_df = lineitems_df.filter("l_extendedprice > 100000").select(
+    "l_orderkey", "l_shipdate", "l_shipmode", "l_extendedprice", "l_discount"
+)
+print(f"There are a total of {high_value_line_items_df.count()} high value line items")
+
+avg_price_by_ship_mode = high_value_line_items_df.groupBy("l_shipmode").agg(
+    avg("l_extendedprice").alias("avg_price")
+)
+print(f"Average price by ship mode (high_value_line_items_df is re-evaluated):")
+display(avg_price_by_ship_mode)
+
+max_price_by_ship_mode = high_value_line_items_df.groupBy("l_shipmode").agg(
+    max("l_extendedprice").alias("max_price")
+)
+print(f"Max price by ship mode (high_value_line_items_df is re-evaluated again):")
+display(max_price_by_ship_mode)
+
+
+
+# Cached query
+high_value_line_items_df =  lineitems_df.filter("l_extendedprice > 100000").select("l_orderkey", "l_shipdate", "l_shipmode", "l_extendedprice", "l_discount")
+high_value_line_items_df.cache()
+print(f"There are a total of {high_value_line_items_df.count()} high value line items")
+
+avg_price_by_ship_mode = high_value_line_items_df.groupBy("l_shipmode").agg(avg("l_extendedprice").alias("avg_price"))
+print(f"Average price by ship mode (high_value_line_items_df is NOT re-evaluated):")
+avg_price_by_ship_mode.show()
+
+max_price_by_ship_mode = high_value_line_items_df.groupBy("l_shipmode").agg(max("l_extendedprice").alias("max_price"))
+print(f"Max price by ship mode (high_value_line_items_df is NOT re-evaluated):")
+max_price_by_ship_mode.show()
+
+
+# un-cache the dataframe
+lineitems_df.unpersist()
+
+
+
+# Drop the tables we created
+for table in ["lineitem", "orders"]:
+    spark.sql(f"DROP TABLE IF EXISTS {table}")
+
+print("Clean up completed!")
+
+Key Takeaways
+Understanding Spark Performance
+
+Monitor resource utilization, data flow patterns, and bottlenecks using the Spark UI
+Understand the impact of data size, formats, and distribution on performance
+Partitioning Strategies
+
+Choose high-cardinality columns for even distribution
+Target 100-200MB per partition as a general guideline
+Use repartition() and coalesce() to control partition count
+Reducing Shuffle Operations
+
+Filter early to reduce data volume
+Use broadcast joins for small tables
+Maintain consistent partitioning where possible
+Monitor shuffle spill metrics (memory vs disk)
+DataFrame Caching
+
+Cache DataFrames that are reused in multiple operations
+Use cache() or persist() explicitly
+Remember to unpersist() when data is no longer needed
+Query Optimization
+
+Understand Catalyst optimizer and execution plans with explain()
+Leverage predicate pushdown and column pruning
+Use the appropriate join strategy for your data
+Predictive Optimization with Delta Lake
+
+Delta Lake's Predictive Optimization automatically leverages your OPTIMIZE and Z-ORDER operations
+When you run queries, the query optimizer automatically considers your Z-ORDER indexes
+Benefits:
+No need to explicitly hint which indexes to use in your queries
+The system automatically prunes files based on Z-ORDER columns
+Queries are automatically optimized for better performance
+Reduces I/O by skipping files that don't contain relevant data
+Example: If you've run OPTIMIZE table ZORDER BY (date_col, region):
+A query with WHERE date_col = '2023-01-01' AND region = 'APAC' automatically benefits
+The optimizer uses Z-ORDER statistics to read only relevant files
+This happens transparently without any special query modifications
+Best Practices
+
+Use the Spark UI to monitor performance
+Filter early and select only needed columns
+Optimize join operations and join order
+Minimize UDFs in favor of built-in functions
+
+
+
