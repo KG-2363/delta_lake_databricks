@@ -303,6 +303,8 @@ DESCRIBE DETAIL delta_orders
 OPTIMIZE delta_orders
 ZORDER BY (order_date, customer_id);
 
+Note - This command compacted the number of files from 4 to 1.
+
 -- Check optimization metrics
 DESCRIBE HISTORY delta_orders;
 
@@ -320,11 +322,13 @@ The VACUUM command permanently removes files that are no longer referenced by th
 
 -- First, check the retention period (default is 7 days)
 SET spark.databricks.delta.retentionDurationCheck.enabled = false;
+This is to remove the auto retention of 7 days.
 
 -- Remove files no longer referenced by the Delta table and are older than the retention period
 -- See what would be deleted without actually removing files (dry run)
 VACUUM delta_orders RETAIN 24 HOURS DRY RUN;
 
+This will remove the previous versions of the files.
 
 
 %sql
