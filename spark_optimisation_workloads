@@ -2,20 +2,122 @@
 This notebook demonstrates key performance optimization techniques for Apache Spark applications using the TPC-H dataset:
 
 
-Understanding Spark Performance - Resource utilization and data flow patterns
+1. Understanding Spark Performance - Resource utilization and data flow patterns
+   Factors affecting performance -
 
-Partitioning Strategies - DataFrame partitioning for better distribution
+2. Partitioning Strategies - DataFrame partitioning for better distribution
 
-Reducing Shuffle Operations - Minimizing expensive shuffle operations
+3. Reducing Shuffle Operations - Minimizing expensive shuffle operations
 
-DataFrame Caching - Effective data persistence strategies
+4. DataFrame Caching - Effective data persistence strategies
 
-Query Optimization - Understanding Catalyst optimizer and execution plans
+5. Query Optimization - Understanding Catalyst optimizer and execution plans
 
 Throughout this notebook, we'll examine the Spark UI at each step to understand the impact of various optimizations.
+-------------------------------------------------------------------------------------------------------------------
+Resource Utilisation (CPU, memory, network, disk I/O)
+Data Characteristics (size, format, distribution)
+Configuration Settings and Cluster Setup
+
+Common bottlenecks -
+
+Data skew and uneven or inadequate partitioning
+Excessive Shuffling and Data Movement
+Memory Pressure & Garbage Collection
+
+Spark Partitioning 
+
+It is the foundation of distributed processing performance 
+
+Partitions are determined by -
+
+ Files or blocks when data is read from a table or directory (typically distributed)
+    These are known as initial memory partitions 
+ As a result of a wide transformation( group by, join) or (repartition, colaesce) 
+    These are known as shuffle partitions 
+    The default partitioner in apache spark is the hash partitioner Hash(key) % numPartitions 
+
+Initial (Memory) Partitions 
+--------------------------------
+
+ When Apache spark reads a file (like Parquet, CSV etc.), it creates partitions based on 
+
+  The underlying file splits (e.g. HDFS blocks, file sizes).
+  These are initial memory partitions ( defined before any transformations)
+  The Driver decides the number based on the Apache Spark conf like-
+    spark.sql.maxPartitionBytes ( default 128 MB)
+    spark.default.parallelism ( used when reading non file data like collections )
 
 
-# make copies of "lineitem", "orders" tables
+Shuffle Partitions 
+---------------------------------
+Created during wide transformations 
+controlled by spark.sql.shuffle.partitions ( default 200 )
+These affect how data is redistributed across the cluster during a shuffle stage
+These partitions are often smaller and can drastically impact performance if not tuned
+
+what we can do ?
+
+Choosing partitioning keys --
+  Using high cardinality columns for even distribution
+  groupby automatically repartitions on group keys
+  df.repartition(n,col("col_name")) -- repartition on another key
+
+Right sizing shuffle partitions -- 
+  Target 100-200 MB per partition
+  Partitions should not be less than number of cores 
+  df.repartition(n) or df.coalesce(n)
+  Monitor task duration (50 - 200 ms )
+ 
+Shuffle Operations --
+===================================
+Shuffles are triggered by wide operations(like grouby, join, distinct ) or changes to partition counts
+They write intermediate results to disk and send data over the network
+Network I/O required by shuffles impacts performance 
+Filter early filter often
+use broadcast join for table size less than 10 MB
+configure shuffle partitions based on data size 
+maintain consistent partitioning where possible
+monitor shuffle spill metrics (memory vs disk)
+
+DataFrame Caching -- Data persistence for iterative and interactive workloads
+
+When to use caching 
+  multiple accesses to same dataframes/RDDS
+  expensive transformation upstream
+  Interactive analysis and ML iterations 
+  Look up tables used across operations 
+
+Cache Management --
+ using df.cache() or df.persist() explicitly
+ monitor executor memory usage with UI
+ calling df.unpersist() when no longer needed
+
+Tradeoff while caching 
+ It uses executor memory, so best for frequently used dfs
+
+Optimising Joins --
+
+ joins are most expensive operations as it involves shuffles
+ automatic optimisation by spark
+ but we can reference small_df.join(large_df,"key","inner") - more efficient than the reverse
+ 
+ for broadcast 
+from pyspark.sql.functions import broadcast
+ large_df.join(broadcast(small_df,"key")
+
+
+Data Skew --
+Uneven distribution of join keys can impact performance 
+
+Catalyst optimiser Analysis -- logical optimisation -- 
+Predicate Pushdown
+AQE
+
+======================================================================================================================
+
+
+# make local copies of "lineitem", "orders" tables
 
 for table in ["lineitem", "orders"]:
     print(f"Creating local copy of {table}...")
@@ -23,59 +125,77 @@ for table in ["lineitem", "orders"]:
     # Create a local copy
     spark.table(f"samples.tpch.{table}").write.mode("overwrite").saveAsTable(table)
 
-
-
-
-
     orders_df = spark.table("orders")
-lineitems_df = spark.table("lineitem")
+    lineitems_df = spark.table("lineitem")
 
-
-
+--------------------------------------------------------
 
 from pyspark.sql.functions import col, sum, count, avg
 import time
 
+
 # Get cluster info for better partitioning
+-- default partitioning is the number of cores
+
 num_cores = sc.defaultParallelism
 print(f"Default parallelism (cores): {num_cores}")
 
+
 # Get shuffle partitions to 200 (Spark default)
+
 shuffle_partitions = spark.conf.get("spark.sql.shuffle.partitions")
+
 print(f"Default shuffle partitions: {shuffle_partitions}")
 
 
 
 
-C. Understanding Partitioning and Shuffling
+ Understanding Partitioning and Shuffling
+
+
 -------------------------------------------------------------------------------------------------------------------------
 
 Let's deep dive into partitioning and understand how different operations affect the numbers or sizes of partitions and 
 shuffling.
 
 1. Default Partitioning
+---------------------------------------------------------------------------------------------------------------
+
+
 The default number of partitions in an input dataframe (read using the DataFrameReader from files or from a table) is 
 equivalent to the number of files in the dataset
 
 # Note that the default number of partitions in the dataframe is equivalent to the number of files in the dataset
-print(f"Default partitions (lineitem): {lineitems_df.rdd.getNumPartitions()}")
-display(spark.sql("DESCRIBE DETAIL lineitem").select("numFiles"))
 
+print(f"Default partitions (lineitem): {lineitems_df.rdd.getNumPartitions()}")
+
+display(spark.sql("DESCRIBE DETAIL lineitem").select("numFiles")) --shows the number of files
+
+# shows 10 files 
 
 
 2. Narrow Transformations and Partition Counts
+---------------------------------------------------------------------------------------------------------------
+
 Narrow transformations (such as filter, select, drop, withColumn) will either retain the same number of partitions or 
 reduce the number of partitions in the resultant dataframe, let's have a look.
 
 print(f"Starting number of partitions: {lineitems_df.rdd.getNumPartitions()}")
+
 high_value_lineitems_df = lineitems_df.filter("l_extendedprice > 60000 AND l_linenumber < 2")
+
 print(f"Number of partitions (after narrow transformation): {high_value_lineitems_df.rdd.getNumPartitions()}")
 
+# retains same number of files 
+But after filtering, the file sizes vary as it creates uneven distribution of data across partitions 
 
 
 3. Narrow Transformations and Skew
-Narrow transformations such as filter can create uneven partition sizes (as filtered records may not be distributed equally),
+---------------------------------------------------------------------------------------------------------------
+
+Narrow transformations such as (filter, withColumn, drop, select) can create uneven partition sizes (as filtered records may not be distributed equally),
 to demonstrate this we will write out the results of our dataframe and look at the resultant file sizes.
+
 
 def show_partition_sizes(input_dataframe):
     # Define the output directory
@@ -91,22 +211,31 @@ def show_partition_sizes(input_dataframe):
         .mode("overwrite") \
         .save(output_path)
 
+
     # List the files in the directory
+
     print("Files in the output directory:")
     files = dbutils.fs.ls(output_path)
     for i, file in enumerate([f for f in files if f.path.endswith(".parquet")]):
         print(f"Partition {i}: Size: {file.size} bytes")
 
+
 show_partition_sizes(high_value_lineitems_df)
 
-
+# Retains no of partitions but sizes differ -- It shows 10 partitions but the file sizes vary 1.24 to 0.67 ...bytes 
 
 # To normalize skew, lets repartition
+-- Repartitioning is a way to handle data skew as it redistributes data acorss partitions in an even manner.
+
 balanced_df = high_value_lineitems_df.repartition(10)
 show_partition_sizes(balanced_df)
 
+-- It redistributes data across partitions to 1.0... bytes in each partitions 
+
 # Alternatively you could repartition by a specific column (or columns) for better data distribution
+
 # balanced_df = high_value_lineitems_df.repartition(10, "l_orderkey")
+
 # show_partition_sizes(balanced_df)
 
 
@@ -120,8 +249,10 @@ Notice that the above operation forced 90% of the dataset to shuffle (moving dat
 smaller_df = high_value_lineitems_df.coalesce(5)
 show_partition_sizes(smaller_df)
 
+
 5. Wide Transformations and Partitioning
-Wide transformations (like groupBy, join, repartition) cause data to be shuffled across the network. They affect partitioning in significant ways:
+Wide transformations (like groupBy, join, repartition) cause data to be shuffled across the network.
+They affect partitioning in significant ways:
 
 They typically change the number of partitions (based on spark.sql.shuffle.partitions)
 They redistribute data across partitions based on keys
@@ -130,9 +261,15 @@ They can create or resolve data skew depending on how they're used
 
 # Check partitions in original DataFrame
 print(f"Original partitions in lineitems_df: {lineitems_df.rdd.getNumPartitions()}")
+
+-- 10
+
 # Apply a groupBy (wide transformation)
 grouped_lineitems = lineitems_df.groupBy("l_suppkey").count()
 print(f"Partitions after groupBy: {grouped_lineitems.rdd.getNumPartitions()}")
+
+-- 4
+
 # The resultant number of partitions is determined by AQE (adaptive query execution)
 
 
@@ -142,13 +279,12 @@ Let's demonstrate the effects of the spark.sql.shuffle.partitions configuration 
 
 
 
-
 # Force disable AQE for a test
 spark.conf.set("spark.sql.adaptive.enabled", "false")
 grouped_lineitems_no_aqe = lineitems_df.groupBy("l_suppkey").count()
 print(f"Partitions after groupBy with AQE disabled: {grouped_lineitems_no_aqe.rdd.getNumPartitions()}")
 
-# Why 200? remember the default value of spark.sql.shuffle.partitions
+-- Why 200? remember the default value of spark.sql.shuffle.partitions
 
 
 
@@ -156,7 +292,7 @@ print(f"Partitions after groupBy with AQE disabled: {grouped_lineitems_no_aqe.rd
 spark.conf.set("spark.sql.shuffle.partitions", num_cores)
 grouped_lineitems_no_aqe_updated_shuffle_parts = lineitems_df.groupBy("l_suppkey").count()
 print(f"Partitions after groupBy with AQE disabled and shuffle partitions set: {grouped_lineitems_no_aqe_updated_shuffle_parts.rdd.getNumPartitions()}")
-
+--4
 
 
 # Let's re-enable AQE now and re-set the number of shuffle partitions to the default
@@ -166,7 +302,8 @@ spark.conf.set("spark.sql.adaptive.enabled", "true")
 
 
 E. Analyzing Explain Plans
-Spark's explain() function is a powerful tool for understanding query execution. It shows how Spark's Catalyst optimizer transforms your code into execution steps.
+Spark's explain() function is a powerful tool for understanding query execution. 
+It shows how Spark's Catalyst optimizer transforms your code into execution steps.
 
 Let's examine explain plans for different operations to better understand optimization opportunities:
 
@@ -299,6 +436,8 @@ max_price_by_ship_mode = high_value_line_items_df.groupBy("l_shipmode").agg(max(
 print(f"Max price by ship mode (high_value_line_items_df is NOT re-evaluated):")
 max_price_by_ship_mode.show()
 
+
+# Under storage tab in Spark UI, we can see this cached df, memory used/reserved 
 
 # un-cache the dataframe
 lineitems_df.unpersist()
