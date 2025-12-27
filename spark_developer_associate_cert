@@ -344,5 +344,514 @@ Ans - C
 ---------------------------------------------------------------------------------------
 UDEMY TEST - 1 :
 
+Question 1 --
+
+A data engineer needs to write a DataFrame df to a Parquet file, partitioned by the column country, and overwrite any existing data at the destination path.
+
+Which code should the data engineer use to accomplish this task in Apache Spark?
+
+Adf.write.mode('overwrite').partitionBy('country').parquet('/data/output')
+Bdf.write.mode('append').partitionBy('country').parquet('/data/output')
+Cdf.write.mode('overwrite').parquet('/data/output')
+Ddf.write.partitionBy('country').parquet('/data/output')
+
+
+Answer : A
+
+The .mode('overwrite') ensures that existing files at the path will be replaced.
+
+.partitionBy('country') optimizes queries by writing data into partitioned folders.
+
+Correct syntax:
+
+df.write.mode('overwrite').partitionBy('country').parquet('/data/output')
+
+--- Source: Spark SQL, DataFrames and Datasets Guide
+
+
+
+Question 2
+A data engineer is reviewing a Spark application that applies several transformations to a DataFrame but notices that the job does not start executing immediately.
+
+Which two characteristics of Apache Spark's execution model explain this behavior?
+
+Choose 2 answers:
+
+AThe Spark engine requires manual intervention to start executing transformations.
+BOnly actions trigger the execution of the transformation pipeline.
+CTransformations are executed immediately to build the lineage graph.
+DThe Spark engine optimizes the execution plan during the transformations, causing delays.
+ETransformations are evaluated lazily.
+
+
+Question 3
+Which command overwrites an existing JSON file when writing a DataFrame?
+
+Adf.write.mode('overwrite').json('path/to/file')
+Bdf.write.overwrite.json('path/to/file')
+Cdf.write.json('path/to/file', overwrite=True)
+Ddf.write.format('json').save('path/to/file', mode='overwrite')
+Ans -- A 
+
+Question 4
+What is the benefit of using Pandas on Spark for data transformations?
+
+Options:
+
+AIt is available only with Python, thereby reducing the learning curve.
+BIt computes results immediately using eager execution, making it simple to use.
+CIt runs on a single node only, utilizing the memory with memory-bound DataFrames and hence cost-efficient.
+DIt executes queries faster using all the available cores in the cluster as well as provides Pandas's rich set of features.
+
+
+Answer : D
+
+Pandas API on Spark (formerly Koalas) offers:
+
+Familiar Pandas-like syntax
+
+Distributed execution using Spark under the hood
+
+Scalability for large datasets across the cluster
+
+It provides the power of Spark while retaining the productivity of Pandas.
+
+
+Question 5
+A data scientist is working with a Spark DataFrame called customerDF that contains customer information. The DataFrame has a column named email with customer email addresses. The data scientist needs to split this column into username and domain parts.
+
+Which code snippet splits the email column into username and domain columns?
+
+A.
+
+customerDF.select(
+
+col("email").substr(0, 5).alias("username"),
+
+col("email").substr(-5).alias("domain")
+
+)
+
+B.
+
+customerDF.withColumn("username", split(col("email"), "@").getItem(0)) \
+
+.withColumn("domain", split(col("email"), "@").getItem(1))
+
+C.
+
+customerDF.withColumn("username", substring_index(col("email"), "@", 1)) \
+
+.withColumn("domain", substring_index(col("email"), "@", -1))
+
+D.
+
+customerDF.select(
+
+regexp_replace(col("email"), "@", "").alias("username"),
+
+regexp_replace(col("email"), "@", "").alias("domain")
+
+)
+
+AOption A
+BOption B
+COption C
+DOption D
+
+
+Answer : B
+
+Option B is the correct and idiomatic approach in PySpark to split a string column (like email) based on a delimiter such as '@'.
+
+The split(col('email'), '@') function returns an array with two elements: username and domain.
+
+getItem(0) retrieves the first part (username).
+
+getItem(1) retrieves the second part (domain).
+
+withColumn() is used to create new columns from the extracted values.
+
+Example from official Databricks Spark documentation on splitting columns:
+
+from pyspark.sql.functions import split, col
+
+df.withColumn('username', split(col('email'), '@').getItem(0)) \
+
+.withColumn('domain', split(col('email'), '@').getItem(1))
+
+Why other options are incorrect:
+
+A uses fixed substring indices (substr(0, 5)), which won't correctly extract usernames and domains of varying lengths.
+
+C uses substring_index, which is available but less idiomatic for splitting emails and is slightly less readable.
+
+D removes '@' from the email entirely, losing the separation between username and domain, and ends up duplicating values in both fields.
+
+Therefore, Option B is the most accurate and reliable solution according to Apache Spark 3.5 best practices.
+
+
+
+Question 6
+Which feature of Spark Connect is considered when designing an application to enable remote interaction with the Spark cluster?
+
+AIt provides a way to run Spark applications remotely in any programming language
+BIt can be used to interact with any remote cluster using the REST API
+CIt allows for remote execution of Spark jobs
+DIt is primarily used for data ingestion into Spark from external sources
+
+
+Answer : C
+
+Spark Connect introduces a decoupled client-server architecture. Its key feature is enabling Spark job submission and execution from remote clients --- in Python, Java, etc.
+
+From Databricks documentation:
+
+''Spark Connect allows remote clients to connect to a Spark cluster and execute Spark jobs without being co-located with the Spark driver.''
+
+A is close, but 'any language' is overstated (currently supports Python, Java, etc., not literally all).
+
+B refers to REST, which is not Spark Connect's mechanism.
+
+D is incorrect; Spark Connect isn't focused on ingestion.
+
+Final Answer: C
+
+
+
+Question 7
+A developer runs:
+
+
+
+What is the result?
+
+Options:
+
+AIt stores all data in a single Parquet file.
+BIt throws an error if there are null values in either partition column.
+CIt appends new partitions to an existing Parquet file.
+DIt creates separate directories for each unique combination of color and fruit.
+
+
+Answer : D
+
+The partitionBy() method in Spark organizes output into subdirectories based on unique combinations of the specified columns:
+
+e.g.
+
+/path/to/output/color=red/fruit=apple/part-0000.parquet
+
+/path/to/output/color=green/fruit=banana/part-0001.parquet
+
+This improves query performance via partition pruning.
+
+It does not consolidate into a single file.
+
+Null values are allowed in partitions.
+
+It does not 'append' unless .mode('append') is used.
+
+
+
+
+
+Question #1Topic 1
+Which of the following describes the Spark driver?
+
+A. The Spark driver is responsible for performing all execution in all execution modes – it is the entire Spark application.
+B. The Spare driver is fault tolerant – if it fails, it will recover the entire Spark application.
+C. The Spark driver is the coarsest level of the Spark execution hierarchy – it is synonymous with the Spark application.
+D. The Spark driver is the program space in which the Spark application’s main method runs coordinating the Spark entire application. Most Voted
+E. The Spark driver is horizontally scaled to increase overall processing throughput of a Spark application.
+ 
+Correct Answer: D 
+
+
+Question #2Topic 1
+Which of the following describes the relationship between nodes and executors?
+
+A. Executors and nodes are not related.
+B. Anode is a processing engine running on an executor.
+C. An executor is a processing engine running on a node. Most Voted
+D. There are always the same number of executors and nodes.
+E. There are always more nodes than executors.
+ 
+Correct Answer: C 🗳️
+
+
+Question #3Topic 1
+Which of the following will occur if there are more slots than there are tasks?
+
+A. The Spark job will likely not run as efficiently as possible. Most Voted
+B. The Spark application will fail – there must be at least as many tasks as there are slots.
+C. Some executors will shut down and allocate all slots on larger executors first.
+D. More tasks will be automatically generated to ensure all slots are being used.
+E. The Spark job will use just one single slot to perform all tasks.
+ 
+Correct Answer: A 🗳️
+Community vote distribution
+
+
+Question #4Topic 1
+Which of the following is the most granular level of the Spark execution hierarchy?
+
+A. Task Most Voted
+B. Executor
+C. Node
+D. Job
+E. Slot
+ 
+Correct Answer: A 
+
+
+Question #5Topic 1
+Which of the following statements about Spark jobs is incorrect?
+
+A. Jobs are broken down into stages.
+B. There are multiple tasks within a single job when a DataFrame has more than one partition.
+C. Jobs are collections of tasks that are divided up based on when an action is called.
+D. There is no way to monitor the progress of a job. Most Voted
+E. Jobs are collections of tasks that are divided based on when language variables are defined.
+ 
+Correct Answer: D 🗳️
+Community vote distribution
+D (100%)
+
+
+Question #6Topic 1
+Which of the following operations is most likely to result in a shuffle?
+
+A. DataFrame.join() Most Voted
+B. DataFrame.filter()
+C. DataFrame.union()
+D. DataFrame.where()
+E. DataFrame.drop()
+ 
+Correct Answer: A 
+
+
+Question #7Topic 1
+The default value of spark.sql.shuffle.partitions is 200. Which of the following describes what that means?
+
+A. By default, all DataFrames in Spark will be spit to perfectly fill the memory of 200 executors.
+B. By default, new DataFrames created by Spark will be split to perfectly fill the memory of 200 executors.
+C. By default, Spark will only read the first 200 partitions of DataFrames to improve speed.
+D. By default, all DataFrames in Spark, including existing DataFrames, will be split into 200 unique segments for parallelization.
+E. By default, DataFrames will be split into 200 unique partitions when data is being shuffled. Most Voted
+ 
+Correct Answer: E 
+
+
+Question #8Topic 1
+Which of the following is the most complete description of lazy evaluation?
+
+A. None of these options describe lazy evaluation
+B. A process is lazily evaluated if its execution does not start until it is put into action by some type of trigger Most Voted
+C. A process is lazily evaluated if its execution does not start until it is forced to display a result to the user
+D. A process is lazily evaluated if its execution does not start until it reaches a specified date and time
+E. A process is lazily evaluated if its execution does not start until it is finished compiling
+ 
+Correct Answer: B 
+
+
+Question #9Topic 1
+Which of the following DataFrame operations is classified as an action?
+
+A. DataFrame.drop()
+B. DataFrame.coalesce()
+C. DataFrame.take() Most Voted
+D. DataFrame.join()
+E. DataFrame.filter()
+ 
+Correct Answer: C 
+
+Question #10Topic 1
+Which of the following DataFrame operations is classified as a wide transformation?
+
+A. DataFrame.filter()
+B. DataFrame.join() Most Voted
+C. DataFrame.select()
+D. DataFrame.drop()
+E. DataFrame.union()
+ 
+Correct Answer: B 🗳️
+
+
+Question #11Topic 1
+Which of the following describes the difference between cluster and client execution modes?
+
+A. The cluster execution mode runs the driver on a worker node within a cluster, while the client execution mode runs the driver on the client machine (also known as a gateway machine or edge node).
+B. The cluster execution mode is run on a local cluster, while the client execution mode is run in the cloud.
+C. The cluster execution mode distributes executors across worker nodes in a cluster, while the client execution mode runs a Spark job entirely on one client machine.
+D. The cluster execution mode runs the driver on the cluster machine (also known as a gateway machine or edge node), while the client execution mode runs the driver on a worker node within a cluster.
+E. The cluster execution mode distributes executors across worker nodes in a cluster, while the client execution mode submits a Spark job from a remote machine to be run on a remote, unconfigurable cluster.
+ 
+Correct Answer: A 
+
+
+Question #12Topic 1
+Which of the following statements about Spark’s stability is incorrect?
+
+A. Spark is designed to support the loss of any set of worker nodes.
+B. Spark will rerun any failed tasks due to failed worker nodes.
+C. Spark will recompute data cached on failed worker nodes.
+D. Spark will spill data to disk if it does not fit in memory.
+E. Spark will reassign the driver to a worker node if the driver’s node fails. Most Voted
+ 
+Correct Answer: E 🗳️
+
+
+Question #13Topic 1
+Which of the following cluster configurations is most likely to experience an out-of-memory error in response to data skew in a single partition?
+image1
+Note: each configuration has roughly the same compute power using 100 GB of RAM and 200 cores.
+
+A. Scenario #4
+B. Scenario #5
+C. Scenario #6 Most Voted
+D. More information is needed to determine an answer.
+E. Scenario #1
+ 
+Correct Answer: C 🗳️
+Community vote distribution
+C (89%)
+
+
+The most likely scenario to experience an out-of-memory error in response to data skew in a single partition is:
+
+C. Scenario #6: 12.5 GB Worker Node, 12.5 GB Executor. 1 Driver & 8 Executors.
+
+Explanation:
+
+Data skew refers to an uneven distribution of data across partitions. When there is significant skew in a single partition,
+it can lead to increased memory usage for that specific partition, potentially causing out-of-memory errors. 
+The smaller the available memory per executor, the higher the likelihood of encountering such issues.
+
+In this case, Scenario #6 has the smallest worker node and executor configuration, with only 12.5 GB of RAM available for each executor. With 8 executors,
+the total available memory is still 100 GB (similar to other scenarios),
+but the reduced memory per executor increases the risk of encountering out-of-memory errors when handling skewed data
+in a single partition.
+
+
+
+Question #14Topic 1
+Of the following situations, in which will it be most advantageous to store DataFrame df at the MEMORY_AND_DISK 
+storage level rather than the MEMORY_ONLY storage level?
+
+A. When all of the computed data in DataFrame df can fit into memory.
+B. When the memory is full and it’s faster to recompute all the data in DataFrame df rather than read it from disk.
+C. When it’s faster to recompute all the data in DataFrame df that cannot fit into memory based on its logical plan rather than read it from disk.
+D. When it’s faster to read all the computed data in DataFrame df that cannot fit into memory from disk rather than recompute it based on its logical plan. Most Voted
+E. The storage level MENORY_ONLY will always be more advantageous because it’s faster to read data from memory than it is to read data from disk.
+ 
+Correct Answer: D 
+
+
+Question #15Topic 1
+A Spark application has a 128 GB DataFrame A and a 1 GB DataFrame B. If a broadcast join were to be performed on these two DataFrames, which of the following describes which DataFrame should be broadcasted and why?
+
+A. Either DataFrame can be broadcasted. Their results will be identical in result and efficiency.
+B. DataFrame B should be broadcasted because it is smaller and will eliminate the need for the shuffling of itself.
+C. DataFrame A should be broadcasted because it is larger and will eliminate the need for the shuffling of DataFrame B.
+D. DataFrame B should be broadcasted because it is smaller and will eliminate the need for the shuffling of DataFrame A. Most Voted
+E. DataFrame A should be broadcasted because it is smaller and will eliminate the need for the shuffling of itself.
+ 
+Correct Answer: D 🗳️
+
+
+
+Question #16Topic 1
+Which of the following operations can be used to create a new DataFrame that has 12 partitions from an original DataFrame df that has 8 partitions?
+
+A. df.repartition(12) Most Voted
+B. df.cache()
+C. df.partitionBy(1.5)
+D. df.coalesce(12)
+E. df.partitionBy(12)
+ 
+Correct Answer: A 
+
+
+
+Question #17Topic 1
+Which of the following object types cannot be contained within a column of a Spark DataFrame?
+
+A. DataFrame Most Voted
+B. String
+C. Array
+D. null
+E. Vector
+ 
+Correct Answer: A 
+
+
+Question #18Topic 1
+Which of the following operations can be used to create a DataFrame with a subset of columns from DataFrame storesDF that are specified by name?
+
+A. storesDF.subset()
+B. storesDF.select() Most Voted
+C. storesDF.selectColumn()
+D. storesDF.filter()
+E. storesDF.drop()
+ 
+Correct Answer: B 🗳️
+
+
+Question #19Topic 1
+The code block shown below contains an error. The code block is intended to return a DataFrame containing all columns from DataFrame storesDF except for column sqft and column customerSatisfaction. Identify the error.
+Code block:
+storesDF.drop(sqft, customerSatisfaction)
+
+A. The drop() operation only works if one column name is called at a time – there should be two calls in succession like storesDF.drop("sqft").drop("customerSatisfaction").
+B. The drop() operation only works if column names are wrapped inside the col() function like storesDF.drop(col(sqft), col(customerSatisfaction)).
+C. There is no drop() operation for storesDF.
+D. The sqft and customerSatisfaction column names should be quoted like "sqft" and "customerSatisfaction". Most Voted
+E. The sqft and customerSatisfaction column names should be subset from the DataFrame storesDF like storesDF."sqft" and storesDF."customerSatisfaction".
+ 
+Correct Answer: D
+
+
+The error in the code block is that the column names sqft and customerSatisfaction should be quoted, like "sqft" and "customerSatisfaction", since they are strings. The correct code block should be:
+
+storesDF.drop("sqft", "customerSatisfaction")
+
+
+Question #20Topic 1
+Which of the following statements about Spark DataFrames is incorrect?
+
+A. Spark DataFrames are the same as a data frame in Python or R. Most Voted
+B. Spark DataFrames are built on top of RDDs.
+C. Spark DataFrames are immutable.
+D. Spark DataFrames are distributed.
+E. Spark DataFrames have common Structured APIs.
+ 
+Correct Answer: A 🗳️
+
+
+
+
+
+
+===================================================================================
+
+My Understanding --
+
+narrow vs wide transformation --
+
+when the data needs to be moved (exchanged) across partitions then it is wide 
+
+narrow --
+select, filter, drop, withcolumn, coalesce 
+
+wide --
+join, groupBy, agg, repartition 
+
+
+
+
+
+
+
 
 
