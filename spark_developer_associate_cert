@@ -370,27 +370,30 @@ df.write.mode('overwrite').partitionBy('country').parquet('/data/output')
 
 
 
-Question 2
+Question 2 --
+
 A data engineer is reviewing a Spark application that applies several transformations to a DataFrame but notices that the job does not start executing immediately.
 
 Which two characteristics of Apache Spark's execution model explain this behavior?
 
 Choose 2 answers:
 
-AThe Spark engine requires manual intervention to start executing transformations.
-BOnly actions trigger the execution of the transformation pipeline.
-CTransformations are executed immediately to build the lineage graph.
-DThe Spark engine optimizes the execution plan during the transformations, causing delays.
-ETransformations are evaluated lazily.
+A. The Spark engine requires manual intervention to start executing transformations.
+B. Only actions trigger the execution of the transformation pipeline.
+C. Transformations are executed immediately to build the lineage graph.
+D. The Spark engine optimizes the execution plan during the transformations, causing delays.
+E. Transformations are evaluated lazily.
+
+Ans - B,E
 
 
 Question 3
 Which command overwrites an existing JSON file when writing a DataFrame?
 
-Adf.write.mode('overwrite').json('path/to/file')
-Bdf.write.overwrite.json('path/to/file')
-Cdf.write.json('path/to/file', overwrite=True)
-Ddf.write.format('json').save('path/to/file', mode='overwrite')
+A. df.write.mode('overwrite').json('path/to/file')
+B. df.write.overwrite.json('path/to/file')
+C. df.write.json('path/to/file', overwrite=True)
+D. df.write.format('json').save('path/to/file', mode='overwrite')
 Ans -- A 
 
 Question 4
@@ -398,10 +401,10 @@ What is the benefit of using Pandas on Spark for data transformations?
 
 Options:
 
-AIt is available only with Python, thereby reducing the learning curve.
-BIt computes results immediately using eager execution, making it simple to use.
-CIt runs on a single node only, utilizing the memory with memory-bound DataFrames and hence cost-efficient.
-DIt executes queries faster using all the available cores in the cluster as well as provides Pandas's rich set of features.
+A. It is available only with Python, thereby reducing the learning curve.
+B. It computes results immediately using eager execution, making it simple to use.
+C. It runs on a single node only, utilizing the memory with memory-bound DataFrames and hence cost-efficient.
+D. It executes queries faster using all the available cores in the cluster as well as provides Pandas's rich set of features.
 
 
 Answer : D
@@ -495,10 +498,10 @@ Therefore, Option B is the most accurate and reliable solution according to Apac
 Question 6
 Which feature of Spark Connect is considered when designing an application to enable remote interaction with the Spark cluster?
 
-AIt provides a way to run Spark applications remotely in any programming language
-BIt can be used to interact with any remote cluster using the REST API
-CIt allows for remote execution of Spark jobs
-DIt is primarily used for data ingestion into Spark from external sources
+A. It provides a way to run Spark applications remotely in any programming language
+B. It can be used to interact with any remote cluster using the REST API
+C. It allows for remote execution of Spark jobs
+D. It is primarily used for data ingestion into Spark from external sources
 
 
 Answer : C
@@ -522,16 +525,16 @@ Final Answer: C
 Question 7
 A developer runs:
 
-
+df.partitionBy("country","colour")
 
 What is the result?
 
 Options:
 
-AIt stores all data in a single Parquet file.
-BIt throws an error if there are null values in either partition column.
-CIt appends new partitions to an existing Parquet file.
-DIt creates separate directories for each unique combination of color and fruit.
+A. It stores all data in a single Parquet file.
+B. It throws an error if there are null values in either partition column.
+C. It appends new partitions to an existing Parquet file.
+D. It creates separate directories for each unique combination of color and fruit.
 
 
 Answer : D
@@ -554,7 +557,8 @@ It does not 'append' unless .mode('append') is used.
 
 
 
-
+--------------------------------------------------------------------
+EXAMTOPICS Ques --
 
 Question #1Topic 1
 Which of the following describes the Spark driver?
@@ -596,7 +600,7 @@ Community vote distribution
 Question #4Topic 1
 Which of the following is the most granular level of the Spark execution hierarchy?
 
-A. Task Most Voted
+A. Task       
 B. Executor
 C. Node
 D. Job
@@ -622,14 +626,14 @@ D (100%)
 Question #6Topic 1
 Which of the following operations is most likely to result in a shuffle?
 
-A. DataFrame.join() Most Voted
+A. DataFrame.join() 
 B. DataFrame.filter()
 C. DataFrame.union()
 D. DataFrame.where()
 E. DataFrame.drop()
  
 Correct Answer: A 
-
+-- Join, GroupBy, Distinct, Repartition
 
 Question #7Topic 1
 The default value of spark.sql.shuffle.partitions is 200. Which of the following describes what that means?
@@ -647,7 +651,7 @@ Question #8Topic 1
 Which of the following is the most complete description of lazy evaluation?
 
 A. None of these options describe lazy evaluation
-B. A process is lazily evaluated if its execution does not start until it is put into action by some type of trigger Most Voted
+B. A process is lazily evaluated if its execution does not start until it is put into action by some type of trigger 
 C. A process is lazily evaluated if its execution does not start until it is forced to display a result to the user
 D. A process is lazily evaluated if its execution does not start until it reaches a specified date and time
 E. A process is lazily evaluated if its execution does not start until it is finished compiling
@@ -660,7 +664,7 @@ Which of the following DataFrame operations is classified as an action?
 
 A. DataFrame.drop()
 B. DataFrame.coalesce()
-C. DataFrame.take() Most Voted
+C. DataFrame.take()
 D. DataFrame.join()
 E. DataFrame.filter()
  
@@ -670,7 +674,7 @@ Question #10Topic 1
 Which of the following DataFrame operations is classified as a wide transformation?
 
 A. DataFrame.filter()
-B. DataFrame.join() Most Voted
+B. DataFrame.join()
 C. DataFrame.select()
 D. DataFrame.drop()
 E. DataFrame.union()
@@ -681,7 +685,8 @@ Correct Answer: B 🗳️
 Question #11Topic 1
 Which of the following describes the difference between cluster and client execution modes?
 
-A. The cluster execution mode runs the driver on a worker node within a cluster, while the client execution mode runs the driver on the client machine (also known as a gateway machine or edge node).
+A. The cluster execution mode runs the driver on a worker node within a cluster, while the client execution mode runs the driver on the client machine 
+(also known as a gateway machine or edge node).
 B. The cluster execution mode is run on a local cluster, while the client execution mode is run in the cloud.
 C. The cluster execution mode distributes executors across worker nodes in a cluster, while the client execution mode runs a Spark job entirely on one client machine.
 D. The cluster execution mode runs the driver on the cluster machine (also known as a gateway machine or edge node), while the client execution mode runs the driver on a worker node within a cluster.
@@ -754,7 +759,7 @@ A Spark application has a 128 GB DataFrame A and a 1 GB DataFrame B. If a broadc
 A. Either DataFrame can be broadcasted. Their results will be identical in result and efficiency.
 B. DataFrame B should be broadcasted because it is smaller and will eliminate the need for the shuffling of itself.
 C. DataFrame A should be broadcasted because it is larger and will eliminate the need for the shuffling of DataFrame B.
-D. DataFrame B should be broadcasted because it is smaller and will eliminate the need for the shuffling of DataFrame A. Most Voted
+D. DataFrame B should be broadcasted because it is smaller and will eliminate the need for the shuffling of DataFrame A. 
 E. DataFrame A should be broadcasted because it is smaller and will eliminate the need for the shuffling of itself.
  
 Correct Answer: D 🗳️
@@ -764,7 +769,7 @@ Correct Answer: D 🗳️
 Question #16Topic 1
 Which of the following operations can be used to create a new DataFrame that has 12 partitions from an original DataFrame df that has 8 partitions?
 
-A. df.repartition(12) Most Voted
+A. df.repartition(12) 
 B. df.cache()
 C. df.partitionBy(1.5)
 D. df.coalesce(12)
@@ -777,7 +782,7 @@ Correct Answer: A
 Question #17Topic 1
 Which of the following object types cannot be contained within a column of a Spark DataFrame?
 
-A. DataFrame Most Voted
+A. DataFrame 
 B. String
 C. Array
 D. null
@@ -790,7 +795,7 @@ Question #18Topic 1
 Which of the following operations can be used to create a DataFrame with a subset of columns from DataFrame storesDF that are specified by name?
 
 A. storesDF.subset()
-B. storesDF.select() Most Voted
+B. storesDF.select() 
 C. storesDF.selectColumn()
 D. storesDF.filter()
 E. storesDF.drop()
@@ -806,27 +811,193 @@ storesDF.drop(sqft, customerSatisfaction)
 A. The drop() operation only works if one column name is called at a time – there should be two calls in succession like storesDF.drop("sqft").drop("customerSatisfaction").
 B. The drop() operation only works if column names are wrapped inside the col() function like storesDF.drop(col(sqft), col(customerSatisfaction)).
 C. There is no drop() operation for storesDF.
-D. The sqft and customerSatisfaction column names should be quoted like "sqft" and "customerSatisfaction". Most Voted
+D. The sqft and customerSatisfaction column names should be quoted like "sqft" and "customerSatisfaction". 
 E. The sqft and customerSatisfaction column names should be subset from the DataFrame storesDF like storesDF."sqft" and storesDF."customerSatisfaction".
  
 Correct Answer: D
 
 
-The error in the code block is that the column names sqft and customerSatisfaction should be quoted, like "sqft" and "customerSatisfaction", since they are strings. The correct code block should be:
-
+The error in the code block is that the column names sqft and customerSatisfaction should be quoted, like "sqft" and "customerSatisfaction", since they are strings.
+The correct code block should be:
 storesDF.drop("sqft", "customerSatisfaction")
 
 
 Question #20Topic 1
 Which of the following statements about Spark DataFrames is incorrect?
 
-A. Spark DataFrames are the same as a data frame in Python or R. Most Voted
+A. Spark DataFrames are the same as a data frame in Python or R.  Most Voted
 B. Spark DataFrames are built on top of RDDs.
 C. Spark DataFrames are immutable.
 D. Spark DataFrames are distributed.
 E. Spark DataFrames have common Structured APIs.
  
 Correct Answer: A 🗳️
+
+Question #21Topic 1
+Which of the following code blocks returns a DataFrame containing only the rows from DataFrame storesDF where the value in column sqft is less than or equal to 25,000 OR the value in column customerSatisfaction is greater than or equal to 30?
+
+A. storesDF.filter(col("sqft") <= 25000 | col("customerSatisfaction") >= 30)
+B. storesDF.filter(col("sqft") <= 25000 or col("customerSatisfaction") >= 30)
+C. storesDF.filter(sqft <= 25000 or customerSatisfaction >= 30)
+D. storesDF.filter(col(sqft) <= 25000 | col(customerSatisfaction) >= 30)
+E. storesDF.filter((col("sqft") <= 25000) | (col("customerSatisfaction") >= 30)) Most Voted
+ 
+Correct Answer: E
+
+Question #22Topic 1
+Which of the following code blocks returns a new DataFrame from DataFrame storesDF where column storeId is of the type string?
+
+A. storesDF.withColumn("storeId, cast(col("storeId"), StringType()))
+B. storesDF.withColumn("storeId, col("storeId").cast(StringType())) Most Voted
+C. storesDF.withColumn("storeId, cast(storeId).as(StringType)
+D. storesDF.withColumn("storeId, col(storeId).cast(StringType)
+E. storesDF.withColumn("storeId, cast("storeId").as(StringType()))
+ 
+Correct Answer: B 
+
+
+
+Question #23Topic 1
+Which of the following code blocks returns a new DataFrame with a new column employeesPerSqft that is the quotient of column numberOfEmployees and column sqft, both of which are from DataFrame storesDF? Note that column employeesPerSqft is not in the original DataFrame storesDF.
+
+A. storesDF.withColumn("employeesPerSqft", col("numberOfEmployees") / col("sqft")) Most Voted
+B. storesDF.withColumn("employeesPerSqft", "numberOfEmployees" / "sqft")
+C. storesDF.select("employeesPerSqft", "numberOfEmployees" / "sqft")
+D. storesDF.select("employeesPerSqft", col("numberOfEmployees") / col("sqft"))
+E. storesDF.withColumn(col("employeesPerSqft"), col("numberOfEmployees") / col("sqft"))
+ 
+Correct Answer: A 
+
+
+Question #24Topic 1
+The code block shown below should return a new DataFrame from DataFrame storesDF where column modality is the constant string "PHYSICAL", Assume DataFrame storesDF is the only defined language variable. Choose the response that correctly fills in the numbered blanks within the code block to complete this task.
+Code block:
+storesDF. _1_(_2_,_3_(_4_))
+
+A. 1. withColumn
+2. "modality"
+3. col
+4. "PHYSICAL"
+B. 1. withColumn
+2. "modality"
+3. lit
+4. PHYSICAL
+C. 1. withColumn
+2. "modality"
+3. lit
+4. "PHYSICAL" Most Voted
+D. 1. withColumn
+2. "modality"
+3. SrtringType
+4. "PHYSICAL"
+E. 1. newColumn
+2. modality
+3. SrtringType
+4. PHYSICAL
+ 
+Correct Answer: C 
+
+
+Question #25Topic 1
+Which of the following code blocks returns a DataFrame where column storeCategory from DataFrame storesDF is split at the underscore character into column storeValueCategory and column storeSizeCategory?
+A sample of DataFrame storesDF is displayed below:
+image2
+
+A. (storesDF.withColumn("storeValueCategory", split(col("storeCategory"), "_")[1])
+.withColumn("storeSizeCategory", split(col("storeCategory"), "_")[2]))
+B. (storesDF.withColumn("storeValueCategory", col("storeCategory").split("_")[0])
+.withColumn("storeSizeCategory", col("storeCategory").split("_")[1]))
+C. (storesDF.withColumn("storeValueCategory", split(col("storeCategory"), "_")[0])
+.withColumn("storeSizeCategory", split(col("storeCategory"), "_")[1])) Most Voted
+D. (storesDF.withColumn("storeValueCategory", split("storeCategory", "_")[0])
+.withColumn("storeSizeCategory", split("storeCategory", "_")[1]))
+E. (storesDF.withColumn("storeValueCategory", col("storeCategory").split("_")[1])
+.withColumn("storeSizeCategory", col("storeCategory").split("_")[2]))
+ 
+Correct Answer: C 🗳️
+
+
+Question #26Topic 1
+Which of the following code blocks returns a new DataFrame where column productCategories only has one word per row, resulting in a DataFrame with many more rows than DataFrame storesDF?
+A sample of storesDF is displayed below:
+image3
+
+A. storesDF.withColumn("productCategories", explode(col("productCategories"))) Most Voted
+B. storesDF.withColumn("productCategories", split(col("productCategories")))
+C. storesDF.withColumn("productCategories", col("productCategories").explode())
+D. storesDF.withColumn("productCategories", col("productCategories").split())
+E. storesDF.withColumn("productCategories", explode("productCategories"))
+ 
+Correct Answer: A 🗳️
+Community vote distribution
+
+
+
+Question #27Topic 1
+Which of the following code blocks returns a new DataFrame with column storeDescription where the pattern "Description: " has been removed from the beginning of column storeDescription in DataFrame storesDF?
+A sample of DataFrame storesDF is below:
+image4
+
+A. storesDF.withColumn("storeDescription", regexp_replace(col("storeDescription"), "^Description: "))
+B. storesDF.withColumn("storeDescription", col("storeDescription").regexp_replace("^Description: ", ""))
+C. storesDF.withColumn("storeDescription", regexp_extract(col("storeDescription"), "^Description: ", ""))
+D. storesDF.withColumn("storeDescription", regexp_replace("storeDescription", "^Description: ", ""))
+E. storesDF.withColumn("storeDescription", regexp_replace(col("storeDescription"), "^Description: ", "")) Most Voted
+ 
+Correct Answer: E 
+
+
+Question #28Topic 1
+Which of the following code blocks returns a new DataFrame where column division from DataFrame storesDF has been replaced and renamed to column state and column managerName from DataFrame storesDF has been replaced and renamed to column managerFullName?
+
+A. (storesDF.withColumnRenamed(["division", "state"], ["managerName", "managerFullName"])
+B. (storesDF.withColumn("state", col("division"))
+.withColumn("managerFullName", col("managerName")))
+C. (storesDF.withColumn("state", "division")
+.withColumn("managerFullName", "managerName"))
+D. (storesDF.withColumnRenamed("state", "division")
+.withColumnRenamed("managerFullName", "managerName"))
+E. (storesDF.withColumnRenamed("division", "state")
+.withColumnRenamed("managerName", "managerFullName")) Most Voted
+ 
+Correct Answer: E 
+
+
+
+Question #29Topic 1
+The code block shown contains an error. The code block is intended to return a new DataFrame where column sqft from DataFrame storesDF has had its missing values replaced with the value 30,000. Identify the error.
+A sample of DataFrame storesDF is displayed below:
+image5
+Code block:
+storesDF.na.fill(30000, col("sqft"))
+
+A. The argument to the subset parameter of fill() should be a string column name or a list of string column names rather than a Column object. Most Voted
+B. The na.fill() operation does not work and should be replaced by the dropna() operation.
+C. he argument to the subset parameter of fill() should be a the numerical position of the column rather than a Column object.
+D. The na.fill() operation does not work and should be replaced by the nafill() operation.
+E. The na.fill() operation does not work and should be replaced by the fillna() operation.
+ 
+Correct Answer: A 🗳️
+
+
+
+Question #30Topic 1
+Which of the following operations fails to return a DataFrame with no duplicate rows?
+
+A. DataFrame.dropDuplicates()
+B. DataFrame.distinct()
+C. DataFrame.drop_duplicates()
+D. DataFrame.drop_duplicates(subset = None)
+E. DataFrame.drop_duplicates(subset = "all") Most Voted
+ 
+Correct Answer: E 
+
+Option E is incorrect as "all" is not a valid value for the subset parameter in the drop_duplicates() method.
+The correct value should be a column name or a list of column names to be used as the subset to identify duplicate rows.
+All other options (A, B, C, and D) can be used to return a DataFrame with no duplicate rows. The dropDuplicates(), distinct(), and drop_duplicates() methods are
+all equivalent and return a new DataFrame with distinct rows. The drop_duplicates() method also accepts a subset parameter to specify the columns to use for 
+identifying duplicates, and when the subset parameter is not specified, all columns are used. 
+Therefore, both option A and C are valid, and option D is also valid as it is equivalent to drop_duplicates() with no subset parameter.
 
 
 
