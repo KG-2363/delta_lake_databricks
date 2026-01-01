@@ -1831,7 +1831,7 @@ repartition(numPartitions)
 repartitionAndSortWithinPartitions(partitioner)
 ***cache()
 printSchema() select() limit() coalesce(numPartitions) toDF() toRDD()
-
+sort()
 
 ## Below are Actions ------------------------------------------------------------
 
@@ -1869,7 +1869,7 @@ narrow --
 select, filter, drop, withcolumn, coalesce 
 
 wide --
-join, groupBy, agg, repartition 
+join, groupBy, agg, repartition, sort
 
 
 
