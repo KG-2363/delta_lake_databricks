@@ -23,19 +23,45 @@
   no of partitions = no of tasks 
   impacts performance and shuffle partitions
 
+Spark breaks up the data into chunks, called partitions. A
+partition is a collection of rows that sit on one physical machine in our cluster. A DataFrame’s partitions represent how
+the data is physically distributed across your cluster of machines during execution. 
 
 
-# Driver  -
-  creates Spark session
-  sends request to cluter manager for resources
-  co ordinates tasks, handle failures
-
+# Driver  -  It’s the heart of a Spark Application and maintains all relevant information during the lifetime of the application.
+  The driver process, sits on a node in the cluster and is responsible for three things: 
+     maintaining information about the Spark application;
+     responding to a user’s program;
+     and analyzing, distributing, and scheduling work across the executors. 
 
   
 # Executors - run on worker nodes in a spark cluster and host tasks( for I/O and data processing)
+   The executors are responsible for only two things: 
+      1. executing code assigned to it by the driver and
+      2. reporting the state of the computation, on that executor, back to the driver node.
    available CPU cores, memory resources, config settings
    Interact with driver for task coordination and data transfer
    store intermediate ad final results in memory or disk.
+
+
+# Cluster Managers 
+  YARN
+  Mesos
+  Standalone 
+
+# Modes 
+  Local    -- In local mode, these run (as threads) on your individual computer instead of a cluster
+  Client   -- 
+  Cluster  --
+
+
+# The DataFrame concept is not unique to Spark. R and Python both have similar concepts. However, Python/R DataFrames (with some exceptions)
+exist on one machine rather than multiple machines.
+This limits what you can do with a given DataFrame in python and R to the resources that exist on that specific machine.
+
+
+
+
 
 
  # Slots - In Apache Spark, a slot is a unit of execution that is used to execute tasks on a worker node. 
@@ -144,7 +170,17 @@ Shared Nothing Architecture  -  Independence, Fault Tolerance, Scalability, Reso
 It is data re distribution across the clusters to perform aggregation operations such as group by, join, sorting.
 needed when data needs to be combined across partitions
 
-Wide transformations
+
+Narrow transformation -- Transformations consisting of narrow dependencies are those where each input partition will contribute to only one output partition. 
+Our where clause specifies a narrow dependency, where only one partition contributes to at most one output partition.
+
+# Pipelining on narrow dependencies, this means that if we specify multiple filters on DataFrames they’ll all be performed in memory. The
+same cannot be said for shuffles. When we perform a shuffle, Spark will write the results to disk. 
+
+Wide transformations -- A wide dependency style transformation will have input partitions contributing to many output partitions. We call this a shuffle where Spark
+will exchange partitions across the cluster. 
+
+
 Key based operations
 data repartitioning
 
