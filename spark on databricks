@@ -251,6 +251,14 @@ col("age").isNotNull() -- CHECK FOR NULLS
 col("title").contains("Manager") -- STRING MATCHING
 df.sort(col("c1").desc(),col("c2").asc())
 
+
+
+----------------------------------------------------------
+
+The fourth step is a simple renaming, we use the withColumnRenamed method that takes two arguments, the
+original column name and the new column name. Of course, this doesn’t perform computation - this is just another
+transformation! 
+
 ----------------------------------------------------------
  # sum(when(col("Year").isNull(),1).otherwise(0)).alias("Null_Year_count") -- Explain
 
