@@ -44,6 +44,13 @@ data ingestion and trasformation
 
 Kafka, Kinesis, Event Hubs, Alerts/Notifications, Lakehouse( Delta lake, Iceberg)
 
+e.g.--
+purchaseByCustomerPerHour.writeStream
+.format(“memory”) // memory = store in-memory table
+.queryName(“customer_purchases”) // counts = name of the in-memory table
+.outputMode(“complete”) // complete = all the counts should be in the table
+.start(
+
 
 Auto Loader is a datbricks source for high performance cloud storage ingestion with auto schema handling.
    automatically tracks new files in cloud storage and supports schema changes, making it handy for evolving ETL tasks.
