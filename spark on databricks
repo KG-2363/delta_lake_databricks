@@ -1,4 +1,15 @@
 
+A cluster, or group of machines, pools the resources of many machines together allowing us to use all the cumulative
+resources as if they were one. Now a group of machines alone is not powerful, you need a framework to coordinate
+work across them. Spark is a tool for just that, managing and coordinating the execution of tasks on data across a
+cluster of computers.
+
+
+The cluster of machines that Spark will leverage to execute tasks will be managed by a cluster manager like Spark’s
+Standalone cluster manager, YARN, or Mesos. We then submit Spark Applications to these cluster managers which will
+grant resources to our application so that we can complete our work.
+
+
 # Display 
   shows data in tabular format
   limit upto 10000 records or upto 2 MB 
@@ -23,6 +34,7 @@
   no of partitions = no of tasks 
   impacts performance and shuffle partitions
 
+
 Spark breaks up the data into chunks, called partitions. A
 partition is a collection of rows that sit on one physical machine in our cluster. A DataFrame’s partitions represent how
 the data is physically distributed across your cluster of machines during execution. 
@@ -34,7 +46,10 @@ the data is physically distributed across your cluster of machines during execut
      responding to a user’s program;
      and analyzing, distributing, and scheduling work across the executors. 
 
-  
+  Driver process compute the resource requirement, manages end to end lifecycle of a job, including dynamic increase/ decrease of resource computation, schedule and 
+  distribute the work across spark executors, manages node failures by requesting alternative resources, keep track of executor progress, interact with program input.
+
+
 # Executors - run on worker nodes in a spark cluster and host tasks( for I/O and data processing)
    The executors are responsible for only two things: 
       1. executing code assigned to it by the driver and
@@ -44,7 +59,9 @@ the data is physically distributed across your cluster of machines during execut
    store intermediate ad final results in memory or disk.
 
 
-# Cluster Managers 
+# Cluster Managers -- The cluster manager controls physical machines and allocates resources to Spark applications. This can be one of several core cluster managers: 
+Spark’s standalone cluster manager, YARN, or Mesos. This means that there can be multiple Spark applications running on a cluster at the same time. 
+
   YARN
   Mesos
   Standalone 
@@ -53,6 +70,26 @@ the data is physically distributed across your cluster of machines during execut
   Local    -- In local mode, these run (as threads) on your individual computer instead of a cluster
   Client   -- 
   Cluster  --
+
+
+# query plans --
+“sort”, “exchange”, and “FileScan”. 
+
+df.explain()
+
+== Physical Plan ==
+TakeOrderedAndProject(limit=5, orderBy=[destination_total#16194L DESC],
+output=[DEST_COUNTRY_
++- *HashAggregate(keys=[DEST_COUNTRY_NAME#7323], functions=[sum(count#7325L)])
+ +- Exchange hashpartitioning(DEST_COUNTRY_NAME#7323, 5)
+ +- *HashAggregate(keys=[DEST_COUNTRY_NAME#7323], functions=[partial_
+sum(count#7325L)])
+ +- InMemoryTableScan [DEST_COUNTRY_NAME#7323, count#7325L]
+ +- InMemoryRelation [DEST_COUNTRY_NAME#7323, ORIGIN_COUNTRY_NAME#7324, count#
+ +- *Scan csv [DEST_COUNTRY_NAME#7578,ORIGIN_COUNTRY_NAME#7
+
+ -- see how our aggregation happens in two phases, in the partial_sum calls. This is because summing a list of numbers is commutative and Spark can perform the sum,
+partition by partition.
 
 
 # The DataFrame concept is not unique to Spark. R and Python both have similar concepts. However, Python/R DataFrames (with some exceptions)
@@ -72,6 +109,9 @@ This limits what you can do with a given DataFrame in python and R to the resour
 string in the second argument.
 
 df.withColumnRenamed(“DEST_COUNTRY_NAME”, “dest”).columns
+
+# desc function -- You might also notice that desc
+does not return a string but a Column.
 
 # drop Columns --
 df.drop(“ORIGIN_COUNTRY_NAME”).columns
