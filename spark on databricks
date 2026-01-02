@@ -1,3 +1,10 @@
+# Spark --
+
+A cluster, or group of machines, pools the resources of many machines together allowing us to use all the cumulative
+resources as if they were one. Now a group of machines alone is not powerful, you need a framework to coordinate
+work across them. Spark is a tool for just that, managing and coordinating the execution of tasks on data across a
+cluster of computers.
+
 
 # Display 
   shows data in tabular format
