@@ -1795,7 +1795,354 @@ Ans: DataFrame.collect()  sends all data in a DataFrame from executors to the dr
 this generally causes a great amount of network traffic in comparison to the other
 options listed.
 
+-------------------------------------------------------------------------------------------
 
+Databricks Databricks-Certified-Associate-Developer-for-Apache-Spark-3.5 Sample Questions
+Question # 1
+
+54 of 55. What is the benefit of Adaptive Query Execution (AQE)? 
+
+A. It allows Spark to optimize the query plan before execution but does not adapt during runtime. 
+B. It automatically distributes tasks across nodes in the clusters and does not perform runtime adjustments to the query plan. 
+C. It optimizes query execution by parallelizing tasks and does not adjust strategies based on runtime metrics like data skew. 
+D. It enables the adjustment of the query plan during runtime, handling skewed data, optimizing join strategies, and improving overall query performance. 
+
+Ans - D
+
+
+Question # 2
+54 of 55. What is the benefit of Adaptive Query Execution (AQE)? 
+
+A. It allows Spark to optimize the query plan before execution but does not adapt during runtime. 
+B. It automatically distributes tasks across nodes in the clusters and does not perform runtime adjustments to the query plan. 
+C. It optimizes query execution by parallelizing tasks and does not adjust strategies based on runtime metrics like data skew. 
+D. It enables the adjustment of the query plan during runtime, handling skewed data, optimizing join strategies, and improving overall query performance. 
+
+
+
+Question # 3
+49 of 55. In the code block below, aggDF contains aggregations on a streaming DataFrame: aggDF.writeStream \ .format("console") \ .outputMode("???") \ .start() Which output mode at line 3 ensures that the entire result table is written to the console during each trigger execution? 
+
+A. AGGREGATE 
+B. COMPLETE  
+C. REPLACE 
+D. APPEND
+
+Ans - B
+
+
+Question # 4
+48 of 55. A data engineer needs to join multiple DataFrames and has written the following code: from pyspark.sql.functions import broadcast 
+data1 = [(1, "A"), (2, "B")] 
+data2 = [(1, "X"), (2, "Y")] 
+data3 = [(1, "M"), (2, "N")] 
+df1 = spark.createDataFrame(data1, ["id", "val1"])
+df2 = spark.createDataFrame(data2, ["id", "val2"]) 
+df3 = spark.createDataFrame(data3, ["id", "val3"]) 
+df_joined = df1.join(broadcast(df2), "id", "inner") \ .join(broadcast(df3), "id", "inner") 
+What will be the output of this code? 
+
+A. The code will work correctly and perform two broadcast joins simultaneously to join df1 with df2, and then the result with df3.
+B. The code will fail because only one broadcast join can be performed at a time. 
+C. The code will fail because the second join condition (df2.id == df3.id) is incorrect. 
+D. The code will result in an error because broadcast() must be called before the joins, not inline. 
+
+Ans - A
+
+Question # 5
+47 of 55. A data engineer has written the following code to join two DataFrames df1 and df2: 
+df1 = spark.read.csv("sales_data.csv") 
+df2 = spark.read.csv("product_data.csv") 
+df_joined = df1.join(df2, df1.product_id == df2.product_id) 
+The DataFrame df1 contains ~10 GB of sales data, and df2 contains ~8 MB of product data. Which join strategy will Spark use?
+
+A. Shuffle join, as the size difference between df1 and df2 is too large for a broadcast join to work efficiently.
+B. Shuffle join, because AQE is not enabled, and Spark uses a static query plan. 
+C. Shuffle join because no broadcast hints were provided. 
+D. Broadcast join, as df2 is smaller than the default broadcast threshold. 
+
+Ans - D
+
+Question # 6
+46 of 55. A data engineer is implementing a streaming pipeline with watermarking to handle late-arriving records. 
+The engineer has written the following code:
+inputStream \ .withWatermark("event_time", "10 minutes") \ .groupBy(window("event_time", "15 minutes")) 
+What happens to data that arrives after the watermark threshold?
+
+A. Any data arriving more than 10 minutes after the watermark threshold will be ignored and not included in the aggregation. 
+B. Records that arrive later than the watermark threshold (10 minutes) will automatically be included in the aggregation if they fall within the 15-minute window. 
+C. Data arriving more than 10 minutes after the latest watermark will still be included in the aggregation but will be placed into the next window.
+D. The watermark ensures that late data arriving within 10 minutes of the latest event time will be processed and included in the windowed aggregation.
+
+Ans - B
+
+Question # 7
+45 of 55. Which feature of Spark Connect should be considered when designing an application that plans to enable remote interaction with a Spark cluster? 
+
+A. It is primarily used for data ingestion into Spark from external sources. 
+B. It provides a way to run Spark applications remotely in any programming language. 
+C. It can be used to interact with any remote cluster using the REST API. 
+D. It allows for remote execution of Spark jobs. 
+
+Ans - D
+
+Question # 8
+44 of 55. A data engineer is working on a real-time analytics pipeline using Spark Structured Streaming. 
+They want the system to process incoming data in micro-batches at a fixed interval of 5 seconds. 
+Which code snippet fulfills this requirement? 
+
+A. query = df.writeStream \ .outputMode("append") \ .trigger(processingTime="5 seconds") \ .start() 
+B. query = df.writeStream \ .outputMode("append") \ .trigger(continuous="5 seconds") \ .start() 
+C. query = df.writeStream \ .outputMode("append") \ .trigger(once=True) \ .start() 
+D. query = df.writeStream \ .outputMode("append") \ .start() 
+
+A. Option A 
+B. Option B 
+C. Option C 
+D. Option D 
+
+Ans - A
+
+Question # 9
+43 of 55. An organization has been running a Spark application in production and is considering disabling the Spark History Server to reduce resource usage. 
+What will be the impact of disabling the Spark History Server in production?
+
+A. Prevention of driver log accumulation during long-running jobs 
+B. Improved job execution speed due to reduced logging overhead 
+C. Loss of access to past job logs and reduced debugging capability for completed jobs 
+D. Enhanced executor performance due to reduced log size 
+
+Ans - C
+
+
+Question # 10
+42 of 55. A developer needs to write the output of a complex chain of Spark transformations to a Parquet table called events.liveLatest. 
+Consumers of this table query it frequently with filters on both year and month of the event_ts column (a timestamp). 
+The current code: 
+from pyspark.sql import functions as F 
+final = df.withColumn("event_year", F.year("event_ts")) \
+          .withColumn("event_month", F.month("event_ts")) \ 
+          .bucketBy(42, ["event_year", "event_month"]) \ 
+          .saveAsTable("events.liveLatest")
+However, consumers report poor query performance. W
+hich change will enable efficient querying by year and month? 
+
+A. Replace .bucketBy() with .partitionBy("event_year", "event_month") 
+B. Change the bucket count (42) to a lower number 
+C. Add .sortBy() after .bucketBy() 
+D. Replace .bucketBy() with .partitionBy("event_year") only 
+
+Ans - A
+
+Question # 11
+41 of 55. A data engineer is working on the DataFrame df1 and wants the Name with the highest count to appear first (descending order by count), 
+followed by the next highest, and so on. 
+The DataFrame has columns: id | Name | count | timestamp ---------------------------------
+1 | USA | 10 
+2 | India | 20 
+3 | England | 50 
+4 | India | 50 
+5 | France | 20 
+6 | India | 10 
+7 | USA | 30 
+8 | USA | 40
+Which code fragment should the engineer use to sort the data in the Name and count columns?
+
+A. df1.orderBy(col("count").desc(), col("Name").asc()) 
+B. df1.sort("Name", "count") 
+C. df1.orderBy("Name", "count") 
+D. df1.orderBy(col("Name").desc(), col("count").asc()) 
+
+Ans -A
+
+
+Question # 12
+41 of 55. A data engineer is working on the DataFrame df1 and wants the Name with the highest count to appear first (descending order by count), followed by the next highest, and so on. The DataFrame has columns: id | Name | count | timestamp --------------------------------- 1 | USA | 10 2 | India | 20 3 | England | 50 4 | India | 50 5 | France | 20 6 | India | 10 7 | USA | 30 8 | USA | 40 Which code fragment should the engineer use to sort the data in the Name and count columns?
+
+A. df1.orderBy(col("count").desc(), col("Name").asc()) 
+B. df1.sort("Name", "count") 
+C. df1.orderBy("Name", "count") 
+D. df1.orderBy(col("Name").desc(), col("count").asc()) 
+
+Ans - A
+
+
+Question # 13
+40 of 55. A developer wants to refactor older Spark code to take advantage of built-in functions introduced in Spark 3.5. The original code: 
+from pyspark.sql import functions as F 
+min_price = 110.50 
+result_df = prices_df.filter(F.col("price") > min_price).agg(F.count("*"))
+Which code block should the developer use to refactor the code?
+
+A. result_df = prices_df.filter(F.col("price") > F.lit(min_price)).agg(F.count("*"))  
+B. result_df = prices_df.where(F.lit("price") > min_price).groupBy().count() 
+C. result_df = prices_df.withColumn("valid_price", when(col("price") > F.lit(min_price), True)) 
+D. result_df = prices_df.filter(F.lit(min_price) > F.col("price")).count() 
+
+Ans - A
+
+Question # 14
+39 of 55. A Spark developer is developing a Spark application to monitor task performance across a cluster. 
+One requirement is to track the maximum processing time for tasks on each worker node and consolidate this information on the driver for further analysis. 
+Which technique should the developer use? 
+
+A. Broadcast a variable to share the maximum time among workers. 
+B. Configure the Spark UI to automatically collect maximum times. 
+C. Use an RDD action like reduce() to compute the maximum time. 
+D. Use an accumulator to record the maximum time on the driver. 
+
+Ans - D
+
+
+Question # 15
+38 of 55. A data engineer is working with Spark SQL and has a large JSON file stored at /data/input.json. 
+The file contains records with varying schemas, and the engineer wants to create an external table in Spark SQL that: Reads directly from /data/input.json.
+Infers the schema automatically.
+Merges differing schemas. 
+Which code snippet should the engineer use? 
+
+A. CREATE EXTERNAL TABLE users USING json OPTIONS (path '/data/input.json', mergeSchema 'true'); 
+B. CREATE TABLE users USING json OPTIONS (path '/data/input.json'); 
+C. CREATE EXTERNAL TABLE users USING json OPTIONS (path '/data/input.json', inferSchema 'true'); 
+D. CREATE EXTERNAL TABLE users USING json OPTIONS (path '/data/input.json', mergeAll 'true'); 
+
+A. Option A 
+B. Option B 
+C. Option C 
+D. Option D
+
+Ans - D
+
+Question # 16
+37 of 55. A data scientist is working with a Spark DataFrame called customerDF that contains customer information. 
+The DataFrame has a column named email with customer email addresses.
+The data scientist needs to split this column into username and domain parts. 
+Which code snippet splits the email column into username and domain columns? 
+A. customerDF = customerDF \ .withColumn("username", split(col("email"), "@").getItem(0)) \ .withColumn("domain", split(col("email"), "@").getItem(1))
+B. customerDF = customerDF.withColumn("username", regexp_replace(col("email"), "@", ""))
+C. customerDF = customerDF.select("email").alias("username", "domain")
+D. customerDF = customerDF.withColumn("domain", col("email").split("@")[1]) 
+
+A. Option A 
+B. Option B 
+C. Option C 
+D. Option D
+
+Ans - A
+
+Question # 17
+36 of 55. What is the main advantage of partitioning the data when persisting tables? 
+
+A. It compresses the data to save disk space. 
+B. It automatically cleans up unused partitions to optimize storage. 
+C. It ensures that data is loaded into memory all at once for faster query execution. 
+D. It optimizes by reading only the relevant subset of data from fewer partitions. 
+
+Ans - D
+
+Question # 18
+35 of 55. A data engineer is building a Structured Streaming pipeline and wants it to recover from failures or intentional shutdowns by continuing where it left off.
+How can this be achieved? 
+
+A. By configuring the option recoveryLocation during SparkSession initialization. 
+B. By configuring the option checkpointLocation during readStream. 
+C. By configuring the option checkpointLocation during writeStream. 
+D. By configuring the option recoveryLocation during writeStream. 
+
+Ans - 
+
+Question # 19
+34 of 55. A data engineer is investigating a Spark cluster that is experiencing underutilization during scheduled batch jobs.
+After checking the Spark logs, they noticed that tasks are often getting killed due to timeout errors, and there are several warnings about insufficient resources 
+in the logs. Which action should the engineer take to resolve the underutilization issue?
+
+A. Set the spark.network.timeout property to allow tasks more time to complete without being killed. 
+B. Increase the executor memory allocation in the Spark configuration. 
+C. Reduce the size of the data partitions to improve task scheduling. 
+D. Increase the number of executor instances to handle more concurrent tasks. 
+
+Ans - D
+
+
+Question # 20
+33 of 55. The data engineering team created a pipeline that extracts data from a transaction system. 
+The transaction system stores timestamps in UTC, and the data engineers must now transform the transaction_datetime field to the œAmerica/New_York  timezone for reporting.
+Which code should be used to convert the timestamp to the target timezone? 
+A. raw.withColumn("transaction_datetime", from_utc_timestamp(col("transaction_datetime"), "America/New_York"))
+B. raw.withColumn("transaction_datetime", to_utc_timestamp(col("transaction_datetime"), "America/New_York")) 
+C. raw.withColumn("transaction_datetime", date_format(col("transaction_datetime"), "America/New_York")) 
+D. raw.withColumn("transaction_datetime", convert_timezone(col("transaction_datetime"), "America/New_York"))
+
+A. Option A 
+B. Option B 
+C. Option C 
+D. Option D 
+
+Ans - A
+
+Question # 21
+32 of 55. A developer is creating a Spark application that performs multiple DataFrame transformations and actions. 
+The developer wants to maintain optimal performance by properly managing the SparkSession.
+How should the developer handle the SparkSession throughout the application?
+
+A. Use a single SparkSession instance for the entire application. 
+B. Avoid using a SparkSession and rely on SparkContext only. 
+C. Create a new SparkSession instance before each transformation. 
+D. Stop and restart the SparkSession after each action. 
+
+Ans - A
+
+
+Question # 22
+31 of 55. Given a DataFrame df that has 10 partitions, after running the code: df.repartition(20) 
+How many partitions will the result DataFrame have?
+
+A. 5 
+B. 20 
+C. Same number as the cluster executors 
+D. 10 
+
+Ans - B
+
+Question # 23
+30 of 55. A data engineer is working on a num_df DataFrame and has a Python UDF defined as: 
+def cube_func(val): 
+   return val * val * val 
+
+Which code fragment registers and uses this UDF as a Spark SQL function to work with the DataFrame num_df? 
+A. spark.udf.register("cube_func", cube_func) 
+   num_df.selectExpr("cube_func(num)").show() 
+B. num_df.select(cube_func("num")).show() 
+C. spark.createDataFrame(cube_func("num")).show() 
+D. num_df.register("cube_func").select("num").show() 
+
+A. Option A 
+B. Option B 
+C. Option C 
+D. Option D
+
+Ans - A
+
+Question # 24
+29 of 55. A Spark application is experiencing performance issues in client mode due to the driver being resource-constrained. How should this issue be resolved?
+
+A. Switch the deployment mode to cluster mode. 
+B. Add more executor instances to the cluster. 
+C. Increase the driver memory on the client machine. 
+D. Switch the deployment mode to local mode. 
+
+Ans - C
+
+Question # 25
+28 of 55. A data analyst builds a Spark application to analyze finance data and performs the following operations: 
+filter, select, groupBy, and coalesce. Which operation results in a shuffle?
+
+A. filter 
+B. select 
+C. groupBy 
+D. coalesce 
+
+Ans - C
 
 
 
