@@ -126,6 +126,237 @@ We can drop multiple columns by passing in multiple columns as arguments.
 dfWithLongColName.drop(“ORIGIN_COUNTRY_NAME”, “DEST_COUNTRY_NAME”)
 
 
+# Regex -----------------------------------------------------------------------------------
+
+1) What is rlike?
+
+Column.rlike(pattern) returns a boolean Column that is True for rows where the string in that column matches the regex.
+It uses Java-style regular expressions.
+Typical usage:
+
+
+from pyspark.sql.functions import col
+
+df.select(col("zip"), col("zip").rlike(r"^\d{5}$")).show()
+
+like vs rlike
+
+like uses SQL wildcards (%, _), not full regex.
+rlike uses full regex features (character classes, anchors, quantifiers, groups, etc.).
+
+2) Quick regex primer (applies to rlike)
+
+Anchors
+
+^ = start of string
+$ = end of string
+
+
+Character classes
+
+\d = digit (0–9)
+\D = non-digit
+\w = word char (letters, digits, underscore)
+\W = non-word char
+\s = whitespace
+\S = non-whitespace
+[abc] = any of a, b, c
+[^abc] = not a, b, or c
+
+
+Quantifiers
+
+* = 0 or more
++ = 1 or more
+? = 0 or 1
+{n} = exactly n
+{m,n} = between m and n
+
+
+Groups & alternation
+
+(abc) = group
+| = OR
+
+
+Word boundaries
+
+\b = boundary between \w and \W
+
+
+
+
+⚠️ String escaping in Python notebooks: use raw strings (r"...") or double-escape backslashes.
+Example: r"\d+" (preferred) is equivalent to "\\d+".
+
+
+3) Explaining your examples
+Example A
+Pythondf.select(df.zip, df.zip.rlike("[^0-9]")).show() Show more lines
+
+[^0-9] means “any character that is not a digit”.
+This returns True if zip contains at least one non-digit anywhere in the string.
+
+Example B
+Pythondf.select(df.zip, df.zip.rlike("^[0-9]")).show()Show more lines
+
+^[0-9] means “string starts with a digit”.
+This returns True if the first character of zip is a digit (doesn’t require the rest to be digits).
+
+
+If you want entire string is digits only, use:
+r"^\d+$" (start → one or more digits → end).
+
+
+4) Categories & patterns with examples
+Below are common exam/interview-style and day-to-day patterns. I’ll use a column named val for illustration.
+
+Suppose:
+
+from pyspark.sql import functions as F
+
+# Example DataFrame
+data = [
+  ("12345",), ("0123",), ("-12.5",), ("12.",), (".45",), ("abc",),
+  ("abc123",), ("123abc",), ("A_B",), ("  123  ",), ("",), (None,)
+]
+df = spark.createDataFrame(data, ["val"])
+
+A) Numbers
+Integer (digits only)
+df.select("val", F.col("val").rlike(r"^\d+$").alias("is_integer")).show()
+
+Signed integer (+ or - optional)
+df.select("val", F.col("val").rlike(r"^[+-]?\d+$").alias("is_signed_int")).show()
+
+Decimal / Float (relaxed)
+Accepts 12.34, -5., .75, +6, 10
+df.select("val", F.col("val").rlike(r"^[+-]?(\d+(\.\d*)?|\.\d+)$").alias("is_number")).show()
+
+Explanation:
+\d+(\.\d*)? → 12, 12., 12.345
+|\.\d+ → .45
+Optional sign [+-]?
+
+
+Strict decimal (must have a dot with digits on both sides)
+df.select("val", F.col("val").rlike(r"^[+-]?\d+\.\d+$").alias("is_strict_decimal")).show()
+``
+
+Not a number (contains any non-digit excluding sign and dot)
+df.select("val", (~F.col("val").rlike(r"^[+-]?(\d+(\.\d*)?|\.\d+)$")).alias("is_not_number")).show()
+
+~ negates a boolean Column in Spark.
+
+B) Strings (letters/alphanumerics)
+
+Alphabetic only (A–Z, a–z)
+~ negates a boolean Column in Spark.
+
+B) Strings (letters/alphanumerics)
+
+Alphabetic only (A–Z, a–z)
+
+Alphanumeric only (letters + digits)
+df.select("val", F.col("val").rlike(r"^[A-Za-z0-9]+$").alias("is_alnum")).show()
+
+Word characters (\w = letters, digits, underscore)
+
+df.select("val", F.col("val").rlike(r"^\w+$").alias("is_word")).show()
+``
+
+
+Starts with a letter
+df.select("val", F.col("val").rlike(r"^[A-Za-z]").alias("starts_with_letter")).show()
+
+Starts with digit (your Example B)
+df.select("val", F.col("val").rlike(r"^\d").alias("starts_with_digit")).show()
+
+
+
+
+7) Quick “cheat-sheet” mapping of common intents → rlike patterns
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Intent                                   Regex
+Full string is digits                    r"^\d+$"
+Starts with a digit                      r"^\d"
+Contains at least one non-digit          r"[^0-9]"
+Signed integer                           r"^[+-]?\d+$"
+Flexible number (int/decimal)`           r"^[+-]?(\d+(.\d*)?
+Strict decimal                           r"^[+-]?\d+\.\d+$"
+Letters only                             r"^[A-Za-z]+$"
+Alphanumeric only                        r"^[A-Za-z0-9]+$"
+Word chars only                          r"^\w+$"
+Has whitespace                           r"\s"
+US ZIP or ZIP+4                          r"^\d{5}(-\d{4})?$"
+Simple email                             r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$"
+ISO date YYYY-MM-DD                      r"^\d{4}-\d{2}-\d{2}$"
+
+8) Apply to your zip examples (concise)
+Python# Any non-digit anywheredf.select("zip", F.col("zip").rlike(r"[^0-9]").alias("has_non_digit")).show()# Starts with a digitdf.select("zip", F.col("zip").rlike(r"^\d").alias("starts_with_digit")).show()# Entire string is d
+
+
+
  # Slots - In Apache Spark, a slot is a unit of execution that is used to execute tasks on a worker node. 
 A slot is essentially a thread of execution that is managed by the Spark executor.
 When you submit a Spark job, the Spark executor will allocate a number of slots on each worker node in the cluster.
