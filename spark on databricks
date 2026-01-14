@@ -581,6 +581,21 @@ according to their current value. The only requirement is that this value be the
 df.na.replace([“”], [“UNKNOWN”], “Description”)
 
 
+# Single column
+storesDF_filled = storesDF.na.fill(30000, "sqft")
+
+# Multiple columns
+storesDF_filled = storesDF.na.fill(30000, ["sqft", "lot_size"])
+
+# Per-column mapping (different values per column)
+storesDF_filled = storesDF.na.fill({"sqft": 30000, "bedrooms": 3})
+``
+
+dropna() removes rows containing nulls; it doesn’t fill missing values. Different operation.
+
+
+
+
 ## UDFs -------------------------------------------------------------------------------------------------------------------------------------------
 
 User defined functions or UDFs and can take and return one or more columns as input. Spark UDFs are incredibly powerful because they can be written in several different
