@@ -272,12 +272,148 @@ df.select("val", F.col("val").rlike(r"^[A-Za-z]").alias("starts_with_letter")).s
 Starts with digit (your Example B)
 df.select("val", F.col("val").rlike(r"^\d").alias("starts_with_digit")).show()
 
+--------------------------------------------------------------------------------------------
+
+1) Temporary View (session-scoped)
+
+Created from a DataFrame; lives only in current SparkSession.
+Not stored in the metastore; no catalog/database.
+Common helpers: createOrReplaceTempView, registerTempTable (legacy), SQL CREATE TEMP VIEW.
+
+PySpark example
+
+Pythondf = spark.read.parquet("/data/customers")
+df.createOrReplaceTempView("customers_v"
+)
+# Use in SQL within the same SparkSession
+spark.sql("""  SELECT country, count(*) AS cnt  FROM customers_v  GROUP BY country""").show()
+
+When to use
+
+Quick, session-local SQL on a DataFrame chain.
+ETL steps within a single job/notebook.
+
+Pitfalls
+
+Not visible outside the session (e.g., another notebook/session won’t see it).
+Disappears when the session ends.
 
 
+2) Global Temporary View
 
-7) Quick “cheat-sheet” mapping of common intents → rlike patterns
+Visible across all SparkSessions within the same Spark application.
+Stored in a special system database called global_temp.
+Lifetime = Spark application lifetime (ends when app ends).
+
+PySpark example
+
+Pythondf = spark.read.json("/data/events")df.createOrReplaceGlobalTempView("events_gv")
+# Must qualify with global_temp
+spark.sql("""  SELECT event_type, count(*) AS cnt  FROM global_temp.events_gv  GROUP BY event_type""").show()
+
+When to use
+
+Multiple sessions/contexts need to share a view within one running app (e.g., multiple notebooks attached to the same cluster/application).
+
+Pitfalls
+
+You must reference it as global_temp.view_name.
+It’s still not persisted—recomputed/invalid once the app is gone.
 
 
+3) Permanent View (Catalog/Metastore view)
+
+A catalog object (stored in metastore), defined on top of tables or other views.
+Survives cluster/app restarts and available to any authorized session.
+Stores only a logical plan; it does not store data.
+
+SQL (recommended)
+SQL
+CREATE OR REPLACE VIEW analytics.active_customers ASSELECT id, countryFROM lakehouse.customersWHERE status = 'active';
+PySpark
+Pythonspark.sql("""  CREATE OR REPLACE VIEW analytics.active_customers AS  SELECT id, country  FROM lakehouse.customers  WHERE status = 'active'""")
+
+When to use
+
+Stable semantic layer over tables.
+Security via GRANT SELECT ON VIEW (if your metastore supports ACLs).
+
+Pitfalls
+
+If underlying schema changes incompatibly, the view may break at query time.
+Permissions required; depends on catalog.
+
+
+4) Tables: Managed vs External
+Managed Table
+
+Spark owns both data and metadata.
+Dropping the table deletes the data.
+
+Pythondf.write.mode("overwrite").saveAsTable("sales.orders_managed")Show more lines
+External Table
+
+Spark manages only metadata; data lives at a path you control.
+Dropping the table does not delete files.
+
+SQLCREATE TABLE sales.orders_extUSING PARQUETLOCATION 's3://bucket/bronze/orders/'AS SELECT * FROM some_source;
+
+When to use
+
+Managed: quick-and-simple lifecycle.
+External: data-lake governance, cross-tool access.
+
+
+5) Namespaces & Referencing
+
+Temp view: view_name
+Global temp view: global_temp.view_name
+Permanent view/table: [catalog.]database.object_name (e.g., hive_metastore.sales.orders if using default Hive catalog)
+
+If using multi-catalog (Spark 3+), you can switch:
+Pythonspark.sql("USE CATALOG hive_metastore")spark.sql("USE sales")Show more lines
+
+6) Lifetime & Caching notes
+
+CACHE TABLE works with permanent tables/views (backed by metastore object).
+
+For temp/global temp views, 
+prefer df.cache() or spark.catalog.cacheTable("global_temp.v") (the latter resolves if the logical plan is resolvable).
+Temp/global temp views are logical—they don’t persist results unless you explicitly cache/persist.
+
+
+7) Common APIs (PySpark)
+Python
+# Temp view (session)
+df.createOrReplaceTempView("v1")
+spark.catalog.dropTempView("v1")  
+
+# drop
+
+# Global temp view
+df.createOrReplaceGlobalTempView("v2")
+spark.catalog.listTables("global_temp")  
+
+# discover
+spark.sql("DROP VIEW global_temp.v2")
+# Permanent view
+spark.sql("""  CREATE OR REPLACE VIEW mart.top_countries AS  SELECT country, count(*) AS cnt  FROM mart.customers  GROUP BY country""")
+spark.sql("DROP VIEW mart.top_countries")
+
+# Managed table
+df.write.mode("overwrite").saveAsTable("mart.customers_managed")
+# External table (SQL)
+spark.sql("""  CREATE TABLE mart.customers_ext  USING PARQUET  LOCATION 'abfss://prod@storage.dfs.core.windows.net/mart/customers/'""")
+
+8) Decision guide
+
+Need quick, ephemeral SQL over a DataFrame in this session → Temp View
+Need to share a temp view across multiple sessions of the same app → Global Temp View
+Need a stable, persistent layer in the metastore → Permanent View
+Need actual persisted data with catalog registration → Table
+
+Spark-managed lifecycle → Managed Table
+Data‑lake ownership elsewhere → External Table
 
 
 
